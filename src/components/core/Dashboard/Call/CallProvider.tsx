@@ -319,27 +319,39 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    const response = await acceptCallApi(pendingCall.channelName)
+    try {
+      const response = await acceptCallApi(pendingCall.channelName)
 
-    const nextActiveCall: ActiveCallSession = {
-      callId: response.callId,
-      channelName: response.channelName,
-      conversationId: response.conversationId,
-      callType: response.callType,
-      appId: response.appId,
-      token: response.token,
-      uid: response.uid,
-      role: "receiver",
-      counterpart: response.caller,
-      initiatedAt: response.initiatedAt,
-      acceptedAt: response.acceptedAt,
-      expiresAt: response.expiresAt,
-      tokenExpiresAt: response.tokenExpiresAt,
+      const nextActiveCall: ActiveCallSession = {
+        callId: response.callId,
+        channelName: response.channelName,
+        conversationId: response.conversationId,
+        callType: response.callType,
+        appId: response.appId,
+        token: response.token,
+        uid: response.uid,
+        role: "receiver",
+        counterpart: response.caller,
+        initiatedAt: response.initiatedAt,
+        acceptedAt: response.acceptedAt,
+        expiresAt: response.expiresAt,
+        tokenExpiresAt: response.tokenExpiresAt,
+      }
+
+      setIncomingCall(null)
+      setActiveCall(nextActiveCall)
+      router.push("/dashboard/videoCall")
+    } catch (error) {
+      // The call may have already been cancelled, expired, or Agora may be
+      // unavailable — clear the prompt and surface a friendly message instead
+      // of leaving the dialog stuck open.
+      setIncomingCall(null)
+      setBannerMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not join the call. It may have already ended.",
+      )
     }
-
-    setIncomingCall(null)
-    setActiveCall(nextActiveCall)
-    router.push("/dashboard/videoCall")
   }, [router])
 
   const declineIncomingCall = useCallback(async () => {

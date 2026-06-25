@@ -39,6 +39,9 @@ const VideoCallClient: React.FC = () => {
   const activeCallRef = useRef(activeCall)
   activeCallRef.current = activeCall
 
+  const endActiveCallRef = useRef(endActiveCall)
+  endActiveCallRef.current = endActiveCall
+
   const clientRef = useRef<IAgoraRTCClient | null>(null)
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null)
   const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null)
@@ -46,9 +49,17 @@ const VideoCallClient: React.FC = () => {
   const remoteVideoContainerRef = useRef<HTMLDivElement | null>(null)
   const endRequestedRef = useRef(false)
 
+  // The Agora session is uniquely identified by its channel name; the token,
+  // appId and uid never change for a given channel. We key the join/media
+  // effects on this stable value so that benign updates to the activeCall
+  // object (e.g. acceptedAt being filled in once the other side answers) do NOT
+  // tear down and re-create the call — which previously ended it instantly.
+  const channelName = activeCall?.channelName ?? null
+
   const [statusText, setStatusText] = useState("Connecting…")
   const [mediaMessage, setMediaMessage] = useState<string | null>(null)
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([])
+  const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null)
   const [isMicEnabled, setIsMicEnabled] = useState(true)
   const [isCameraEnabled, setIsCameraEnabled] = useState(activeCall?.callType === "video")
   const [connectedAt, setConnectedAt] = useState<number | null>(null)
@@ -70,7 +81,8 @@ const VideoCallClient: React.FC = () => {
   }, [connectedAt])
 
   useEffect(() => {
-    if (!activeCall) {
+    const call = activeCallRef.current
+    if (!call) {
       return
     }
 
@@ -81,7 +93,7 @@ const VideoCallClient: React.FC = () => {
     setConnectedAt(null)
     setDurationSeconds(0)
     setIsMicEnabled(true)
-    setIsCameraEnabled(activeCall.callType === "video")
+    setIsCameraEnabled(call.callType === "video")
 
     const client = AgoraRTC.createClient({
       mode: "rtc",
@@ -140,10 +152,10 @@ const VideoCallClient: React.FC = () => {
     const joinCall = async () => {
       try {
         await client.join(
-          activeCall.appId,
-          activeCall.channelName,
-          activeCall.token,
-          activeCall.uid,
+          call.appId,
+          call.channelName,
+          call.token,
+          call.uid,
         )
 
         if (cancelled) {
@@ -161,10 +173,11 @@ const VideoCallClient: React.FC = () => {
           setMediaMessage("Microphone access is unavailable. You can still receive the call.")
         }
 
-        if (activeCall.callType === "video") {
+        if (call.callType === "video") {
           try {
             const videoTrack = await AgoraRTC.createCameraVideoTrack()
             localVideoTrackRef.current = videoTrack
+            setLocalVideoTrack(videoTrack)
             tracksToPublish.push(videoTrack)
           } catch {
             setIsCameraEnabled(false)
@@ -210,6 +223,7 @@ const VideoCallClient: React.FC = () => {
           localVideoTrackRef.current?.stop()
           localVideoTrackRef.current?.close()
           localVideoTrackRef.current = null
+          setLocalVideoTrack(null)
 
           await client.leave()
         } catch {
@@ -219,18 +233,21 @@ const VideoCallClient: React.FC = () => {
 
       void cleanup()
 
-      if (!endRequestedRef.current && activeCallRef.current?.channelName === activeCall.channelName) {
+      if (!endRequestedRef.current && activeCallRef.current?.channelName === call.channelName) {
         endRequestedRef.current = true
-        void endActiveCall("ended", {
+        void endActiveCallRef.current("ended", {
           navigate: false,
           keepalive: true,
         })
       }
     }
-  }, [activeCall, endActiveCall])
+    // Keyed on channelName so the call is only torn down when the channel
+    // actually changes or the screen unmounts — not on every activeCall update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelName])
 
   useEffect(() => {
-    if (!activeCall) {
+    if (!channelName) {
       return
     }
 
@@ -242,26 +259,25 @@ const VideoCallClient: React.FC = () => {
 
     setConnectedAt(null)
     setStatusText("Waiting for the other participant…")
-  }, [activeCall, remoteUsers])
+  }, [channelName, remoteUsers])
 
   useEffect(() => {
-    const localTrack = localVideoTrackRef.current
     const container = localVideoContainerRef.current
 
-    if (!localTrack || !container || !isCameraEnabled) {
+    if (!localVideoTrack || !container || !isCameraEnabled) {
       if (container) {
         container.innerHTML = ""
       }
       return
     }
 
-    localTrack.play(container)
+    localVideoTrack.play(container)
 
     return () => {
-      localTrack.stop()
+      localVideoTrack.stop()
       container.innerHTML = ""
     }
-  }, [activeCall, isCameraEnabled])
+  }, [localVideoTrack, isCameraEnabled])
 
   useEffect(() => {
     const container = remoteVideoContainerRef.current
