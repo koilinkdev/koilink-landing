@@ -19,9 +19,9 @@ const MatchProfileHeader = React.memo(function MatchProfileHeader({
   return (
     <Box className="matchHeader">
       <Box>
-        <Typography className="pageEyebrow">Discover · Match flow</Typography>
+        <Typography className="pageEyebrow">Home · Match flow</Typography>
         <Typography variant="h2" className="pageTitle">
-          Match Profile
+          Home
         </Typography>
         <Typography className="pageSubtitle">
           Swipe through founders and investors. Drag right to connect, left to pass, or up to

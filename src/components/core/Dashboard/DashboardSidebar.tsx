@@ -195,14 +195,9 @@ const DashboardSidebar = ({ open, onClose }: DashboardSidebarProps) => {
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const navItems = [
     {
-      pageName: "Dashboard",
-      pageLink: "/dashboard",
-      icon: <DashboardLinkIcon currentColor={pathname === "/dashboard" ? primary.main : common.color6D9DC5} />,
-    },
-    {
-      pageName: "Match Profile",
-      pageLink: "/dashboard/match-profile",
-      icon: <AllMatchLinkIcon currentColor={pathname === "/dashboard/match-profile" ? primary.main : common.color6D9DC5} />,
+      pageName: "Home",
+      pageLink: "/dashboard/home",
+      icon: <AllMatchLinkIcon currentColor={pathname === "/dashboard/home" ? primary.main : common.color6D9DC5} />,
     },
      {
       pageName: "Profile",
@@ -213,6 +208,11 @@ const DashboardSidebar = ({ open, onClose }: DashboardSidebarProps) => {
       pageName: "Chat",
       pageLink: "/dashboard/chat",
       icon: <ChatLinkIcon currentColor={pathname === "/dashboard/chat" ? primary.main : common.color6D9DC5} />,
+    },
+    {
+      pageName: "Dashboard",
+      pageLink: "/dashboard",
+      icon: <DashboardLinkIcon currentColor={pathname === "/dashboard" ? primary.main : common.color6D9DC5} />,
     },
     {
       pageName: "Policy",
