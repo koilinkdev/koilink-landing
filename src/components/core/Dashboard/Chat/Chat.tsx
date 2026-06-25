@@ -42,6 +42,7 @@ import CameraAltIcon from "@mui/icons-material/CameraAlt"
 import LocationOnIcon from "@mui/icons-material/LocationOn"
 import ContactPhoneIcon from "@mui/icons-material/ContactPhone"
 import CallIcon from "@mui/icons-material/Call"
+import CallMissedIcon from "@mui/icons-material/CallMissed"
 import PersonIcon from "@mui/icons-material/Person"
 import { useSearchParams } from "next/navigation"
 import {
@@ -430,6 +431,40 @@ const parseLocationContent = (text?: string | null): ParsedLocation | null => {
   return parseLatLng(text)
 }
 
+type ParsedCall = {
+  label: string
+  detail: string | null
+  missed: boolean
+  callType: "video" | "audio"
+}
+
+// Parses a call-log message stored by the backend as "📞 Video call · 02:34"
+// or "📞 Missed audio call".
+const parseCallContent = (text?: string | null): ParsedCall | null => {
+  if (!text) {
+    return null
+  }
+
+  const trimmed = text.trim()
+  if (!trimmed.startsWith("📞")) {
+    return null
+  }
+
+  const body = trimmed.replace(/^📞\s*/, "")
+  if (!body) {
+    return null
+  }
+
+  const [labelPart, detailPart] = body.split(" · ")
+
+  return {
+    label: labelPart.trim(),
+    detail: detailPart ? detailPart.trim() : null,
+    missed: /missed/i.test(body),
+    callType: /audio/i.test(body) ? "audio" : "video",
+  }
+}
+
 const parseContactContent = (text?: string | null): ParsedContact | null => {
   if (!text) {
     return null
@@ -566,6 +601,28 @@ const ContactMessageCard: React.FC<{ contact: ParsedContact }> = ({ contact }) =
           <CallIcon />
         </Box>
       ) : null}
+    </Box>
+  )
+}
+
+const CallMessageCard: React.FC<{ call: ParsedCall; isOwn: boolean }> = ({ call, isOwn }) => {
+  const CallTypeIcon = call.missed
+    ? CallMissedIcon
+    : call.callType === "audio"
+      ? CallIcon
+      : VideocamIcon
+
+  return (
+    <Box className={`message_call ${call.missed ? "missed" : ""}`}>
+      <Box className="call_icon">
+        <CallTypeIcon />
+      </Box>
+      <Box className="call_info">
+        <Typography className="call_label">{call.label}</Typography>
+        <Typography className="call_detail">
+          {call.detail ? call.detail : isOwn ? "Outgoing" : "Incoming"}
+        </Typography>
+      </Box>
     </Box>
   )
 }
@@ -1885,6 +1942,11 @@ const ChatSecClient: React.FC = () => {
       case "text": {
         const text = message.text || ""
 
+        const call = parseCallContent(text)
+        if (call) {
+          return <CallMessageCard call={call} isOwn={message.isOwn} />
+        }
+
         const location = parseLocationContent(text)
         if (location) {
           return <LocationMessageCard location={location} />
@@ -2225,6 +2287,8 @@ const ChatSecClient: React.FC = () => {
               {selectedConversation ? (
                 selectedMessages.length > 0 ? (
                   selectedMessages.map((message) => {
+                  const isCallMessage =
+                    message.type === "text" && Boolean(parseCallContent(message.text))
                   const isLocationMessage =
                     message.type === "text" && Boolean(parseLocationContent(message.text))
                   const isContactMessage =
@@ -2253,7 +2317,7 @@ const ChatSecClient: React.FC = () => {
                               message.type === "video" ? "video-bubble" : ""
                             } ${isLocationMessage ? "location-bubble" : ""} ${
                               isContactMessage ? "contact-bubble" : ""
-                            }`}
+                            } ${isCallMessage ? "call-bubble" : ""}`}
                           >
                             {renderMessage(message)}
                           </Box>

@@ -228,6 +228,10 @@ export const ChatClientStyled = styled(Box)`
                   padding: 10px;
                   min-width: 232px;
                 }
+                &.call-bubble {
+                  padding: 10px 14px;
+                  min-width: 188px;
+                }
 
                 &.own .contact_avatar {
                   background: rgba(255, 255, 255, 0.22);
@@ -335,6 +339,62 @@ export const ChatClientStyled = styled(Box)`
                       }
                     }
                   }
+                }
+
+                .message_call {
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  width: 100%;
+
+                  .call_icon {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 50%;
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(16, 157, 164, 0.12);
+                    color: ${primary.main};
+
+                    svg {
+                      font-size: 20px;
+                    }
+                  }
+
+                  &.missed .call_icon {
+                    background: rgba(229, 72, 77, 0.14);
+                    color: #e5484d;
+                  }
+
+                  .call_info {
+                    flex: 1;
+                    min-width: 0;
+                  }
+
+                  .call_label {
+                    font-size: 14px;
+                    font-weight: 600;
+                    line-height: 1.3;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  }
+
+                  .call_detail {
+                    font-size: 12px;
+                    opacity: 0.72;
+                  }
+                }
+
+                &.own .message_call .call_icon {
+                  background: rgba(255, 255, 255, 0.22);
+                  color: ${common.white};
+                }
+                &.own .message_call.missed .call_icon {
+                  background: rgba(255, 255, 255, 0.22);
+                  color: #ffd7d7;
                 }
 
                 .message_contact {
