@@ -1,6 +1,6 @@
 "use client"
 
-import { Box, Grid } from "@mui/material"
+import { Box } from "@mui/material"
 import { useRouter } from "next/navigation"
 import React from "react"
 import {
@@ -20,7 +20,6 @@ import MatchFeedbackBanner from "./MatchFeedbackBanner"
 import MatchFilterDrawer from "./MatchFilterDrawer"
 import MatchInsightsPanel from "./MatchInsightsPanel"
 import MatchProfileHeader from "./MatchProfileHeader"
-import MatchQueuePanel from "./MatchQueuePanel"
 import type { MatchedConversation, SwipeDecision, SwipeLimitState } from "./matchProfileTypes"
 import {
   ANIMATION_DURATION,
@@ -460,48 +459,40 @@ const MatchProfileClient = () => {
         onOpenConversation={openMatchedConversation}
       />
 
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, xl: 7, lg: 7 }}>
-          <Box className="deckShell">
-            <MatchDeck
-              currentProfile={currentProfile}
-              nextProfile={nextProfiles[0] ?? null}
-              visibleDecision={visibleDecision}
-              canInteract={canInteract}
-              isDragging={isDragging}
-              isLoading={isLoading}
-              currentCardTransform={currentCardTransform}
-              currentCardOpacity={currentCardOpacity}
-              nextCardScale={nextCardScale}
-              remainingCount={remainingCount}
-              getCardImage={getCardImage}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
-              onRestart={handleRestart}
-            />
-            <MatchActionStrip
-              activeIndex={activeIndex}
-              isAnimating={isAnimating}
-              isRewinding={isRewinding}
-              rewindLimit={rewindLimit}
-              rewindsUsed={rewindsUsed}
-              canInteract={canInteract}
-              canShortlist={canShortlist}
-              onUndo={() => { void handleUndo() }}
-              onAdvance={advanceProfile}
-            />
-          </Box>
-
-          <MatchQueuePanel
-            profiles={nextProfiles}
-            isLoadingMore={isLoadingMore}
+      <Box className="studioGrid">
+        <Box className="stageColumn">
+          <MatchDeck
+            currentProfile={currentProfile}
+            nextProfile={nextProfiles[0] ?? null}
+            visibleDecision={visibleDecision}
+            canInteract={canInteract}
+            isDragging={isDragging}
+            isLoading={isLoading}
+            currentCardTransform={currentCardTransform}
+            currentCardOpacity={currentCardOpacity}
+            nextCardScale={nextCardScale}
+            remainingCount={remainingCount}
             getCardImage={getCardImage}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onRestart={handleRestart}
           />
-        </Grid>
+          <MatchActionStrip
+            activeIndex={activeIndex}
+            isAnimating={isAnimating}
+            isRewinding={isRewinding}
+            rewindLimit={rewindLimit}
+            rewindsUsed={rewindsUsed}
+            canInteract={canInteract}
+            canShortlist={canShortlist}
+            onUndo={() => { void handleUndo() }}
+            onAdvance={advanceProfile}
+          />
+        </Box>
 
-        <Grid size={{ xs: 12, xl: 5, lg: 5 }}>
+        <Box className="dossierColumn">
           <MatchInsightsPanel
             currentProfile={currentProfile}
             visibleDecision={visibleDecision}
@@ -509,8 +500,8 @@ const MatchProfileClient = () => {
             savedCount={savedIds.length}
             passedCount={passedIds.length}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       <MatchFilterDrawer
         open={filterOpen}

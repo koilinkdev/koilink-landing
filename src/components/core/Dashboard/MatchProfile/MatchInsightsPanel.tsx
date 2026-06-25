@@ -1,10 +1,17 @@
 "use client"
 
-import { Box, Stack, Typography } from "@mui/material"
+import {
+  ArticleOutlined,
+  DataObjectRounded,
+  PlaceOutlined,
+  VerifiedRounded,
+} from "@mui/icons-material"
+import { Box, Typography } from "@mui/material"
 import React from "react"
 import KeyDataDisplay from "@/components/ui/Dashboard/KeyDataDisplay"
-import { formatMatchProfileTitle, type MatchProfileCard } from "@/lib/matchmaking-presenters"
-import { ACTION_META } from "./matchProfileUtils"
+import type { MatchProfileCard } from "@/lib/matchmaking-presenters"
+import MatchLocationMap from "./MatchLocationMap"
+import MatchScoreGauge from "./MatchScoreGauge"
 import type { SwipeDecision } from "./matchProfileTypes"
 
 type MatchInsightsPanelProps = {
@@ -15,6 +22,62 @@ type MatchInsightsPanelProps = {
   passedCount: number
 }
 
+type TabKey = "overview" | "location" | "data"
+
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: "overview", label: "Overview", icon: <ArticleOutlined /> },
+  { key: "location", label: "Location", icon: <PlaceOutlined /> },
+  { key: "data", label: "Key data", icon: <DataObjectRounded /> },
+]
+
+const FactCell = ({ label, value }: { label: string; value: string }) => (
+  <Box className="factCell">
+    <small>{label}</small>
+    <b>{value}</b>
+  </Box>
+)
+
+const TabSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <Box className="tabSection">
+    <Typography className="tabSectionTitle">{title}</Typography>
+    {children}
+  </Box>
+)
+
+const OverviewTab = ({ profile }: { profile: MatchProfileCard }) => (
+  <>
+    <TabSection title="Quick facts">
+      <Box className="factGrid">
+        <FactCell label="User type" value={profile.userTypeLabel} />
+        <FactCell label="Profile type" value={profile.profileSubtypeLabel} />
+        <FactCell label="Capital" value={profile.capital} />
+        <FactCell label="Location" value={profile.location} />
+      </Box>
+    </TabSection>
+
+    <TabSection title="About">
+      {profile.aboutLines.length > 0 ? (
+        <Typography className="aboutText">{profile.aboutLines.join("\n")}</Typography>
+      ) : (
+        <Typography className="mutedText">
+          This profile has not added an about summary yet.
+        </Typography>
+      )}
+    </TabSection>
+
+    <TabSection title="Why this profile can work">
+      <Box>
+        {profile.reasons.map((reason) => (
+          <Box key={reason} className="reasonRow">
+            <span className="reasonDot" />
+            <Typography className="reasonText">{reason}</Typography>
+          </Box>
+        ))}
+      </Box>
+    </TabSection>
+  </>
+)
+
 const MatchInsightsPanel = React.memo(function MatchInsightsPanel({
   currentProfile,
   visibleDecision,
@@ -22,112 +85,120 @@ const MatchInsightsPanel = React.memo(function MatchInsightsPanel({
   savedCount,
   passedCount,
 }: MatchInsightsPanelProps) {
+  const [tab, setTab] = React.useState<TabKey>("overview")
+
+  // Reset to Overview whenever the candidate changes.
+  const profileId = currentProfile?.id
+  React.useEffect(() => {
+    setTab("overview")
+  }, [profileId])
+
+  if (!currentProfile) {
+    return (
+      <Box className="dossier">
+        <Box className="dossierEmpty">
+          <Typography className="emptyStateTitle">Review summary</Typography>
+          <Typography className="mutedText">
+            Connected {connectedCount} · Shortlisted {savedCount} · Passed {passedCount}
+          </Typography>
+        </Box>
+      </Box>
+    )
+  }
+
   return (
-    <Box className="insightPanel">
-      {currentProfile ? (
-        <>
-          <Box className="insightHero">
-            <Typography className="insightEyebrow">Current Match Context</Typography>
-            <Typography className="insightTitle">{currentProfile.name}</Typography>
-            <Typography className="insightText">
-              {currentProfile.about || currentProfile.thesis}
+    <Box className="dossier">
+      <Box className="dossierHead">
+        <Typography className="dossierEyebrow">Current match</Typography>
+        <Box className="dossierIdentity">
+          <Box className="dossierIdentityText">
+            <Typography className="dossierName" component="div">
+              <span>{currentProfile.name}</span>
+              {currentProfile.verified && (
+                <VerifiedRounded className="dossierVerified" sx={{ fontSize: 20, color: "primary.main" }} />
+              )}
             </Typography>
+            <Typography className="dossierRole">{currentProfile.title}</Typography>
           </Box>
+          <MatchScoreGauge value={currentProfile.fitScore} size={84} stroke={7} />
+        </Box>
 
-          <Box className="metricGrid">
-            <MetricCard label="User type" value={currentProfile.userTypeLabel} />
-            <MetricCard label="Profile type" value={currentProfile.profileSubtypeLabel} />
-            <MetricCard label="Fit score" value={`${currentProfile.fitScore}%`} />
-            <MetricCard label="Capital" value={currentProfile.capital} />
+        <Box className="dossierChips">
+          <Box className="dossierChip">
+            <small>Type</small>
+            <b>{currentProfile.userTypeLabel}</b>
           </Box>
-
-          <Box className="detailsSection">
-            <Typography className="detailsTitle">Profile Snapshot</Typography>
-            <Stack spacing={1.25} className="snapshotList">
-              <SnapshotRow label="Name" value={formatMatchProfileTitle(currentProfile)} />
-              <SnapshotRow label="User type" value={currentProfile.userTypeLabel} />
-              <SnapshotRow label="Profile type" value={currentProfile.profileSubtypeLabel} />
-              <SnapshotRow label="Complete location" value={currentProfile.location} />
-            </Stack>
+          <Box className="dossierChip">
+            <small>Focus</small>
+            <b>{currentProfile.profileSubtypeLabel}</b>
           </Box>
-
-          <Box className="detailsSection">
-            <Typography className="detailsTitle">About</Typography>
-            {currentProfile.aboutLines.length > 0 ? (
-              <Stack spacing={1.1} className="aboutList">
-                {currentProfile.aboutLines.map((item, index) => (
-                  <Box key={`${currentProfile.id}-about-${index}`} className="aboutListItem">
-                    <Typography className="aboutListIndex">{index + 1}.</Typography>
-                    <Typography className="reasonText">{item}</Typography>
-                  </Box>
-                ))}
-              </Stack>
-            ) : (
-              <Typography className="sectionSubtitle">
-                This profile has not added an about summary yet.
-              </Typography>
-            )}
+          <Box className="dossierChip">
+            <small>Capital</small>
+            <b>{currentProfile.capital}</b>
           </Box>
+        </Box>
+      </Box>
 
-          <Box className="detailsSection">
-            <Typography className="detailsTitle">Key Data</Typography>
+      <Box className="dossierTabs" role="tablist">
+        {TABS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.key}
+            className={`segTab ${tab === item.key ? "active" : ""}`}
+            onClick={() => setTab(item.key)}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+      </Box>
+
+      <Box className="dossierBody">
+        {tab === "overview" && <OverviewTab profile={currentProfile} />}
+
+        {tab === "location" && (
+          <TabSection title="Where they are based">
+            <MatchLocationMap location={currentProfile.location} mapQuery={currentProfile.mapQuery} />
+          </TabSection>
+        )}
+
+        {tab === "data" && (
+          <TabSection title="Key data">
             <KeyDataDisplay
               role={currentProfile.roleType}
               items={currentProfile.keyDataItems}
               emptyMessage="This profile has not added any key data yet."
             />
-          </Box>
+          </TabSection>
+        )}
 
-          <Box className="detailsSection">
-            <Typography className="detailsTitle">Why this profile can work</Typography>
-            <Stack spacing={1.25}>
-              {currentProfile.reasons.map((reason) => (
-                <Box key={reason} className="reasonRow">
-                  <span className="reasonDot" />
-                  <Typography className="reasonText">{reason}</Typography>
-                </Box>
-              ))}
-            </Stack>
+        <TabSection title="Action preview">
+          <Box className={`actionPreviewCard ${visibleDecision ?? "neutral"}`}>
+            <Typography className="actionPreviewLabel">
+              {visibleDecision === "like"
+                ? "Connect"
+                : visibleDecision === "pass"
+                  ? "Pass"
+                  : visibleDecision === "save"
+                    ? "Shortlist"
+                    : "Waiting for input"}
+            </Typography>
+            <Typography className="actionPreviewText">
+              {visibleDecision === "like"
+                ? "Strong fit worth a conversation — release to connect."
+                : visibleDecision === "pass"
+                  ? "Not the right fit right now — release to pass."
+                  : visibleDecision === "save"
+                    ? "Keep this profile for later review."
+                    : "Drag the card, use the dock, or press the arrow keys to decide."}
+            </Typography>
           </Box>
-
-          <Box className="detailsSection">
-            <Typography className="detailsTitle">Action preview</Typography>
-            <Box className={`actionPreviewCard ${visibleDecision ?? "neutral"}`}>
-              <Typography className="actionPreviewLabel">
-                {visibleDecision ? ACTION_META[visibleDecision].label : "Waiting for input"}
-              </Typography>
-              <Typography className="actionPreviewText">
-                {visibleDecision
-                  ? ACTION_META[visibleDecision].helper
-                  : "Use drag, buttons, or keyboard arrows to test the default, accept, and reject UI states."}
-              </Typography>
-            </Box>
-          </Box>
-        </>
-      ) : (
-        <Box className="emptyInsights">
-          <Typography className="insightTitle">Review summary</Typography>
-          <Typography className="insightText">
-            Connected: {connectedCount} | Shortlisted: {savedCount} | Passed: {passedCount}
-          </Typography>
-        </Box>
-      )}
+        </TabSection>
+      </Box>
     </Box>
   )
 })
-
-const MetricCard = ({ label, value }: { label: string; value: string }) => (
-  <Box className="metricCard">
-    <Typography className="metricLabel">{label}</Typography>
-    <Typography className="metricValue">{value}</Typography>
-  </Box>
-)
-
-const SnapshotRow = ({ label, value }: { label: string; value: string }) => (
-  <Box className="snapshotRow">
-    <Typography className="snapshotLabel">{label}</Typography>
-    <Typography className="snapshotValue">{value}</Typography>
-  </Box>
-)
 
 export default MatchInsightsPanel

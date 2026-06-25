@@ -3,13 +3,10 @@
 import {
   CloseRounded,
   HandshakeRounded,
-  KeyboardArrowLeftRounded,
-  KeyboardArrowRightRounded,
-  KeyboardArrowUpRounded,
   ReplayRounded,
   StarRounded,
 } from "@mui/icons-material"
-import { Box, Stack, Typography } from "@mui/material"
+import { Box, Tooltip } from "@mui/material"
 import React from "react"
 import type { SwipeDecision } from "./matchProfileTypes"
 
@@ -42,69 +39,87 @@ const MatchActionStrip = React.memo(function MatchActionStrip({
   onAdvance,
 }: MatchActionStripProps) {
   const remainingRewinds = getRemainingRewinds(rewindLimit, rewindsUsed)
+  const undoTitle =
+    remainingRewinds === "unlimited"
+      ? "Undo last swipe (unlimited)"
+      : `Undo last swipe (${remainingRewinds} left today)`
 
   return (
     <>
-      <Box className="actionStrip">
-        <Stack alignItems="center" spacing={1}>
-          <button
-            type="button"
-            className="actionButton rewindAction"
-            onClick={onUndo}
-            disabled={isRewinding || activeIndex === 0 || isAnimating}
-            aria-label="Undo last swipe"
-            title={
-              remainingRewinds === "unlimited"
-                ? "Undo last swipe (unlimited)"
-                : `Undo last swipe (${remainingRewinds} left today)`
-            }
-          >
-            <ReplayRounded />
-          </button>
-          <Typography className="actionLabel">
-            {remainingRewinds === "unlimited" ? "Undo" : `Undo (${remainingRewinds})`}
-          </Typography>
-        </Stack>
-
-        {[
-          { decision: "pass" as const, label: "Pass", icon: <CloseRounded /> },
-          { decision: "save" as const, label: "Shortlist", icon: <StarRounded /> },
-          { decision: "like" as const, label: "Connect", icon: <HandshakeRounded /> },
-        ].map((item) => (
-          <Stack key={item.decision} alignItems="center" spacing={1}>
+      <Box className="actionDock">
+        <Tooltip title={undoTitle} arrow>
+          <span>
             <button
               type="button"
-              className={`actionButton ${item.decision}Action`}
-              onClick={() => onAdvance(item.decision)}
-              disabled={item.decision === "save" ? !canShortlist : !canInteract}
-              aria-label={item.label}
+              className="dockButton rewind"
+              onClick={onUndo}
+              disabled={isRewinding || activeIndex === 0 || isAnimating}
+              aria-label="Undo last swipe"
             >
-              {item.icon}
+              <ReplayRounded />
             </button>
-            <Typography className="actionLabel">{item.label}</Typography>
-          </Stack>
-        ))}
+          </span>
+        </Tooltip>
+
+        <Box className="dockDivider" />
+
+        <Tooltip title="Pass" arrow>
+          <span>
+            <button
+              type="button"
+              className="dockButton pass"
+              onClick={() => onAdvance("pass")}
+              disabled={!canInteract}
+              aria-label="Pass"
+            >
+              <CloseRounded />
+            </button>
+          </span>
+        </Tooltip>
+
+        <Tooltip title="Shortlist" arrow>
+          <span>
+            <button
+              type="button"
+              className="dockButton save"
+              onClick={() => onAdvance("save")}
+              disabled={!canShortlist}
+              aria-label="Shortlist"
+            >
+              <StarRounded />
+            </button>
+          </span>
+        </Tooltip>
+
+        <Tooltip title="Connect" arrow>
+          <span>
+            <button
+              type="button"
+              className="dockButton like"
+              onClick={() => onAdvance("like")}
+              disabled={!canInteract}
+              aria-label="Connect"
+            >
+              <HandshakeRounded />
+            </button>
+          </span>
+        </Tooltip>
       </Box>
 
-      <Stack
-        className="shortcutBar"
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        alignItems={{ xs: "flex-start", sm: "center" }}
-      >
-        <Box className="shortcutItem">
-          <KeyboardArrowLeftRounded />
-          <span>Left arrow to pass</span>
-        </Box>
-        <Box className="shortcutItem">
-          <KeyboardArrowUpRounded />
-          <span>Up arrow to shortlist</span>
-        </Box>
-        <Box className="shortcutItem">
-          <KeyboardArrowRightRounded />
-          <span>Right arrow to connect</span>
-        </Box>
-      </Stack>
+      <Box className="shortcutHint">
+        <span className="key">
+          <kbd>←</kbd>
+          <span>Pass</span>
+        </span>
+        <span className="key">
+          <kbd>↑</kbd>
+          <span>Shortlist</span>
+        </span>
+        <span className="key">
+          <kbd>→</kbd>
+          <span>Connect</span>
+        </span>
+      </Box>
     </>
   )
 })

@@ -1,7 +1,7 @@
 "use client"
 
 import { TuneRounded } from "@mui/icons-material"
-import { Badge, Box, Button, Stack, Typography } from "@mui/material"
+import { Box, Typography } from "@mui/material"
 import React from "react"
 import type { HeaderStat } from "./matchProfileTypes"
 
@@ -17,48 +17,32 @@ const MatchProfileHeader = React.memo(function MatchProfileHeader({
   onOpenFilters,
 }: MatchProfileHeaderProps) {
   return (
-    <Stack
-      className="matchProfileHeader"
-      direction={{ xs: "column", xl: "row" }}
-      alignItems={{ xs: "flex-start", xl: "center" }}
-      justifyContent="space-between"
-      spacing={2}
-    >
+    <Box className="matchHeader">
       <Box>
-        <Typography className="pageEyebrow">Desktop Match Flow</Typography>
+        <Typography className="pageEyebrow">Discover · Match flow</Typography>
         <Typography variant="h2" className="pageTitle">
           Match Profile
         </Typography>
         <Typography className="pageSubtitle">
-          A swipe-style founder and investor queue for the web. Drag left to pass, drag right
-          to connect, or shortlist a profile for later review.
+          Swipe through founders and investors. Drag right to connect, left to pass, or up to
+          shortlist — full context and location sit in the dossier.
         </Typography>
       </Box>
 
-      <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
-        <Box className="headerStatsGrid">
-          {headerStats.map((item) => (
-            <Box key={item.label} className="headerStatCard">
-              <Typography className="headerStatValue">{item.value}</Typography>
-              <Typography className="headerStatLabel">{item.label}</Typography>
-            </Box>
-          ))}
-        </Box>
-        <Badge badgeContent={activeFilterCount} color="primary" overlap="rectangular">
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<TuneRounded />}
-            onClick={onOpenFilters}
-            sx={{ whiteSpace: "nowrap", minWidth: 120 }}
-          >
-            {activeFilterCount > 0
-              ? `${activeFilterCount} Filter${activeFilterCount > 1 ? "s" : ""}`
-              : "Filters"}
-          </Button>
-        </Badge>
-      </Stack>
-    </Stack>
+      <Box className="statRail">
+        {headerStats.map((item) => (
+          <Box key={item.label} className={`statPill ${item.label === "Remaining" ? "accent" : ""}`}>
+            <b>{item.value}</b>
+            <span>{item.label}</span>
+          </Box>
+        ))}
+        <button type="button" className="filterButton" onClick={onOpenFilters}>
+          <TuneRounded />
+          Filters
+          {activeFilterCount > 0 && <span className="filterCount">{activeFilterCount}</span>}
+        </button>
+      </Box>
+    </Box>
   )
 })
 

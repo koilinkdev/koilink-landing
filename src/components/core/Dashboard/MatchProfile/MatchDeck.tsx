@@ -1,19 +1,16 @@
 "use client"
 
 import {
-  AutoAwesomeRounded,
   LocationOnOutlined,
   ReplayRounded,
+  VerifiedRounded,
 } from "@mui/icons-material"
 import { Box, Button, Stack, Typography } from "@mui/material"
 import Image from "next/image"
 import React from "react"
 import { formatMatchProfileTitle, type MatchProfileCard } from "@/lib/matchmaking-presenters"
-import {
-  ACTION_META,
-  ANIMATION_DURATION,
-  isRemoteImageUrl,
-} from "./matchProfileUtils"
+import MatchScoreGauge from "./MatchScoreGauge"
+import { ACTION_META, ANIMATION_DURATION, isRemoteImageUrl } from "./matchProfileUtils"
 import type { SwipeDecision } from "./matchProfileTypes"
 
 type MatchDeckProps = {
@@ -35,6 +32,36 @@ type MatchDeckProps = {
   onRestart: () => void
 }
 
+const BackCard = ({
+  profile,
+  image,
+  scale,
+}: {
+  profile: MatchProfileCard
+  image: string
+  scale: number
+}) => (
+  <Box className="deckBackCard" sx={{ transform: `translateY(16px) scale(${scale})` }}>
+    <Box className="backCardImage">
+      <Image
+        src={image}
+        alt={profile.name}
+        fill
+        sizes="(max-width: 1099px) 100vw, 50vw"
+        unoptimized={isRemoteImageUrl(image)}
+      />
+    </Box>
+    <Box className="backCardScrim" />
+    <Box className="backCardContent">
+      <Typography className="backCardLabel">Up next</Typography>
+      <Typography className="backCardTitle">{formatMatchProfileTitle(profile)}</Typography>
+      <Typography className="backCardMeta">
+        {profile.userTypeLabel} · {profile.location}
+      </Typography>
+    </Box>
+  </Box>
+)
+
 const MatchDeck = React.memo(function MatchDeck({
   currentProfile,
   nextProfile,
@@ -55,146 +82,119 @@ const MatchDeck = React.memo(function MatchDeck({
 }: MatchDeckProps) {
   const visibleAction = visibleDecision ? ACTION_META[visibleDecision] : null
 
+  if (!currentProfile) {
+    return (
+      <Box className="deckStage">
+        {isLoading ? (
+          <Box className="deckSkeleton" aria-label="Loading profiles" />
+        ) : (
+          <Box className="emptyState">
+            <Typography className="emptyStateTitle">Queue completed</Typography>
+            <Typography className="emptyStateText">
+              You have reviewed every available profile. Refresh the deck to check for new
+              suggestions, or widen your filters.
+            </Typography>
+            <Button variant="contained" className="restartButton" onClick={onRestart}>
+              <ReplayRounded fontSize="small" />
+              Refresh deck
+            </Button>
+          </Box>
+        )}
+      </Box>
+    )
+  }
+
+  const cardImage = getCardImage(currentProfile)
+
   return (
     <Box className="deckStage">
-      {currentProfile ? (
-        <>
-          {nextProfile && (
-            <Box
-              className="deckBackCard"
-              sx={{ transform: `translateY(20px) scale(${nextCardScale})` }}
-            >
-              <Box className="backCardImage">
-                <Image
-                  src={getCardImage(nextProfile)}
-                  alt={nextProfile.name}
-                  fill
-                  sizes="(max-width: 1199px) 100vw, 60vw"
-                  unoptimized={isRemoteImageUrl(getCardImage(nextProfile))}
-                />
-              </Box>
-              <Box className="backCardScrim" />
-              <Box className="backCardContent">
-                <Typography className="backCardLabel">Up next</Typography>
-                <Typography className="backCardTitle">
-                  {formatMatchProfileTitle(nextProfile)}
-                </Typography>
-                <Typography className="backCardMeta">
-                  {nextProfile.userTypeLabel} | {nextProfile.location}
-                </Typography>
-              </Box>
+      {nextProfile && (
+        <BackCard profile={nextProfile} image={getCardImage(nextProfile)} scale={nextCardScale} />
+      )}
+
+      <Box
+        className={`matchDeckCard ${canInteract ? "" : "isDisabled"}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        sx={{
+          transform: currentCardTransform,
+          opacity: currentCardOpacity,
+          transition: isDragging
+            ? "box-shadow 0.25s ease"
+            : `transform ${ANIMATION_DURATION}ms ease, opacity ${ANIMATION_DURATION}ms ease, box-shadow 0.25s ease`,
+        }}
+      >
+        <Box className="cardImage">
+          <Image
+            src={cardImage}
+            alt={`${currentProfile.name} profile`}
+            fill
+            priority
+            sizes="(max-width: 1099px) 100vw, 50vw"
+            unoptimized={isRemoteImageUrl(cardImage)}
+          />
+        </Box>
+        <Box className="cardTopScrim" />
+
+        <Stack className="cardTopMeta" direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Box className="glassPill muted">
+            <span>{currentProfile.userTypeLabel}</span>
+          </Box>
+          {currentProfile.verified && (
+            <Box className="verifiedBadge">
+              <VerifiedRounded sx={{ fontSize: 15 }} />
+              Verified
+            </Box>
+          )}
+        </Stack>
+
+        <Box className={`decisionHalo ${visibleDecision ? "isVisible" : ""} ${visibleDecision ?? ""}`}>
+          {visibleAction?.icon}
+          <Typography className="decisionLabel">{visibleAction?.label}</Typography>
+        </Box>
+
+        {/* Frosted identity bar — single source for name/role/location/tags */}
+        <Box className="identityBar">
+          <Box className="identityTop">
+            <Box className="identityText">
+              <Typography className="identityName">
+                {formatMatchProfileTitle(currentProfile)}
+              </Typography>
+              <Typography className="identityRole">{currentProfile.title}</Typography>
+            </Box>
+            <MatchScoreGauge value={currentProfile.fitScore} size={68} stroke={6} />
+          </Box>
+
+          <Box className="identityMeta">
+            <LocationOnOutlined fontSize="small" />
+            <span>
+              {currentProfile.location}
+              {currentProfile.company ? ` · ${currentProfile.company}` : ""}
+            </span>
+          </Box>
+
+          {currentProfile.tags.length > 0 && (
+            <Box className="identityTags">
+              {currentProfile.tags.slice(0, 4).map((tag) => (
+                <span key={tag} className="identityTag">
+                  {tag}
+                </span>
+              ))}
             </Box>
           )}
 
-          <Box
-            className={`matchDeckCard ${canInteract ? "" : "isDisabled"}`}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerCancel}
-            sx={{
-              transform: currentCardTransform,
-              opacity: currentCardOpacity,
-              transition: isDragging
-                ? "box-shadow 0.25s ease"
-                : `transform ${ANIMATION_DURATION}ms ease, opacity ${ANIMATION_DURATION}ms ease, box-shadow 0.25s ease`,
-            }}
-          >
-            <Box className="cardImage">
-              <Image
-                src={getCardImage(currentProfile)}
-                alt={`${currentProfile.name} profile`}
-                fill
-                sizes="(max-width: 1199px) 100vw, 60vw"
-                unoptimized={isRemoteImageUrl(getCardImage(currentProfile))}
-              />
-            </Box>
-            <Box className="cardScrim" />
-
-            <Stack className="cardTopMeta" direction="row" justifyContent="space-between">
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Box className="glassPill">
-                  <AutoAwesomeRounded fontSize="small" />
-                  <span>{currentProfile.fitScore}% fit</span>
-                </Box>
-                <Box className="glassPill muted">
-                  <span>{currentProfile.userTypeLabel}</span>
-                </Box>
-              </Stack>
-
-              {currentProfile.verified && (
-                <Box className="verifiedBadge">
-                  <Image
-                    src="/assets/icons/verified-greenTick-profile.svg"
-                    alt="Verified profile"
-                    width={18}
-                    height={18}
-                  />
-                </Box>
-              )}
-            </Stack>
-
-            <Box
-              className={`decisionHalo ${visibleDecision ? "isVisible" : ""} ${
-                visibleDecision ? visibleDecision : ""
-              }`}
-            >
-              {visibleAction?.icon}
-              <Typography className="decisionLabel">{visibleAction?.label}</Typography>
-            </Box>
-
-            <Box className="cardContent">
-              <Typography className="cardTitle">{formatMatchProfileTitle(currentProfile)}</Typography>
-              <Typography className="cardSubtitle">{currentProfile.title}</Typography>
-              <Stack className="cardMetaRow" direction="row" spacing={0.75} alignItems="center">
-                <LocationOnOutlined fontSize="small" />
-                <Typography className="cardMetaText">
-                  {currentProfile.location} | {currentProfile.company}
-                </Typography>
-              </Stack>
-              <Typography className="cardHighlight">{currentProfile.highlight}</Typography>
-
-              <Box className="tagRow">
-                {currentProfile.tags.map((tag) => (
-                  <Box key={tag} className="tagChip">
-                    {tag}
-                  </Box>
-                ))}
-              </Box>
-
-              <Stack
-                className="cardFooter"
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                spacing={2}
-              >
-                <Typography className="cardFooterText">{currentProfile.capital}</Typography>
-                <Box className="progressDots">
-                  {Array.from({ length: Math.min(4, remainingCount) }).map((_, index) => (
-                    <span key={`${currentProfile.id}-${index}`} className={index === 0 ? "isActive" : ""} />
-                  ))}
-                </Box>
-              </Stack>
+          <Box className="identityFooter">
+            <Typography className="identityCapital">{currentProfile.capital}</Typography>
+            <Box className="progressDots" aria-hidden>
+              {Array.from({ length: Math.min(4, remainingCount) }).map((_, index) => (
+                <span key={`${currentProfile.id}-${index}`} className={index === 0 ? "isActive" : ""} />
+              ))}
             </Box>
           </Box>
-        </>
-      ) : (
-        <Box className="emptyState">
-          <Typography className="emptyStateTitle">
-            {isLoading ? "Loading profiles" : "Queue completed"}
-          </Typography>
-          <Typography className="emptyStateText">
-            {isLoading
-              ? "We are preparing your live match feed."
-              : "You have reviewed the available profiles. Refresh the deck to check for new suggestions."}
-          </Typography>
-          <Button variant="contained" className="restartButton" onClick={onRestart}>
-            <ReplayRounded fontSize="small" />
-            {isLoading ? "Refreshing" : "Refresh deck"}
-          </Button>
         </Box>
-      )}
+      </Box>
     </Box>
   )
 })

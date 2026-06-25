@@ -1,6 +1,6 @@
 "use client"
 
-import { Box, Stack, Typography } from "@mui/material"
+import { Box, Typography } from "@mui/material"
 import Image from "next/image"
 import React from "react"
 import { formatMatchProfileTitle, type MatchProfileCard } from "@/lib/matchmaking-presenters"
@@ -18,49 +18,44 @@ const MatchQueuePanel = React.memo(function MatchQueuePanel({
   getCardImage,
 }: MatchQueuePanelProps) {
   return (
-    <Box className="queuePanel">
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        spacing={1}
-        mb={2}
-      >
-        <Box>
-          <Typography className="sectionTitle">Up Next</Typography>
-          <Typography className="sectionSubtitle">
-            Quick previews to keep the website flow feeling as fast as the mobile swipe deck.
-          </Typography>
-        </Box>
-        <Typography className="sectionBadge">{profiles.length} in queue</Typography>
-      </Stack>
+    <Box className="queueBlock">
+      <Box className="queueHead">
+        <Typography className="queueTitle">Up next in your queue</Typography>
+        {profiles.length > 0 && (
+          <Typography className="queueBadge">{profiles.length} waiting</Typography>
+        )}
+      </Box>
 
       {profiles.length > 0 ? (
-        <Box className="queueGrid">
-          {profiles.map((profile) => (
-            <Box key={profile.id} className="queueCard">
-              <Box className="queueCardImage">
-                <Image
-                  src={getCardImage(profile)}
-                  alt={`${profile.name} preview`}
-                  fill
-                  sizes="(max-width: 899px) 100vw, 24vw"
-                  unoptimized={isRemoteImageUrl(getCardImage(profile))}
-                />
+        <Box className="queueStrip">
+          {profiles.map((profile) => {
+            const image = getCardImage(profile)
+            return (
+              <Box key={profile.id} className="queueChip">
+                <Box className="queueAvatar">
+                  <Image
+                    src={image}
+                    alt={`${profile.name} preview`}
+                    fill
+                    sizes="52px"
+                    unoptimized={isRemoteImageUrl(image)}
+                  />
+                </Box>
+                <Box className="queueChipText">
+                  <Typography className="queueChipName">
+                    {formatMatchProfileTitle(profile)}
+                  </Typography>
+                  <Typography className="queueChipMeta">
+                    {profile.userTypeLabel} · {profile.location}
+                  </Typography>
+                </Box>
               </Box>
-              <Box className="queueCardBody">
-                <Typography className="queueCardTitle">{formatMatchProfileTitle(profile)}</Typography>
-                <Typography className="queueCardMeta">
-                  {profile.userTypeLabel} | {profile.location}
-                </Typography>
-                <Typography className="queueCardText">{profile.highlight}</Typography>
-              </Box>
-            </Box>
-          ))}
+            )
+          })}
         </Box>
       ) : (
-        <Box className="queueEmptyState">
-          {isLoadingMore ? "Loading more profiles..." : "No more profiles waiting in the queue."}
+        <Box className="queueEmpty">
+          {isLoadingMore ? "Loading more profiles…" : "No more profiles waiting in the queue."}
         </Box>
       )}
     </Box>

@@ -26,6 +26,36 @@ export type MatchProfileCard = {
   about: string | null
   aboutLines: string[]
   keyDataItems: KeyDataEntry[]
+  /** Cleaned location string safe to drop into a map query, or null when not shared. */
+  mapQuery: string | null
+  hasLocation: boolean
+}
+
+const LOCATION_NOT_SHARED = "Location not shared"
+
+/**
+ * Backends frequently concatenate city/state/country and end up repeating the
+ * country ("Kolkata, West Bengal, India, India"). Split on commas, trim, and
+ * drop case-insensitive duplicate segments while preserving order.
+ */
+function cleanLocation(value?: string | null): string {
+  if (!value) return ""
+
+  const seen = new Set<string>()
+  const parts: string[] = []
+
+  for (const rawPart of value.split(",")) {
+    const part = rawPart.trim()
+    if (!part) continue
+
+    const key = part.toLowerCase()
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    parts.push(part)
+  }
+
+  return parts.join(", ")
 }
 
 const DEFAULT_ROLE_IMAGE: Record<MatchProfileCard["profileType"], string> = {
@@ -149,13 +179,19 @@ export function mapSuggestionToCard(suggestion: MatchSuggestion): MatchProfileCa
     ),
   ).slice(0, 4)
 
+  const location =
+    cleanLocation(
+      suggestion.profile.completeLocation || suggestion.profile.locationLabel,
+    ) || LOCATION_NOT_SHARED
+  const hasLocation = location !== LOCATION_NOT_SHARED
+
   const about = suggestion.profile.about || suggestion.profile.bio || null
   const highlight =
     about ||
     suggestion.matchReasons.join(" | ") ||
     "Promising profile ready for a thoughtful business conversation."
 
-  const reasons =
+  const reasons = (
     suggestion.matchReasons.length > 0
       ? suggestion.matchReasons
       : [
@@ -166,6 +202,7 @@ export function mapSuggestionToCard(suggestion: MatchSuggestion): MatchProfileCa
             ? "Sector preferences overlap."
             : "Worth exploring based on broader business fit.",
         ]
+  ).map((reason) => cleanLocation(reason) || reason)
 
   return {
     id: suggestion.userId,
@@ -181,10 +218,9 @@ export function mapSuggestionToCard(suggestion: MatchSuggestion): MatchProfileCa
     profileSubtypeLabel,
     title: suggestion.profile.headline || `${profileSubtypeLabel} ${userTypeLabel}`.trim(),
     company,
-    location:
-      suggestion.profile.completeLocation ||
-      suggestion.profile.locationLabel ||
-      "Location not shared",
+    location,
+    mapQuery: hasLocation ? location : null,
+    hasLocation,
     stage: humanize(String(stage)),
     capital: buildCapitalLabel(suggestion),
     fitScore: suggestion.matchScore,

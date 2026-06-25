@@ -8,7 +8,7 @@ import TermsLinkIcon from "@/components/ui/icons/TermsLinkIcon";
 import ContactUsLinkIcon from "@/components/ui/icons/ContactUsLinkIcon";
 import ProfileLinkIcon from "@/components/ui/icons/ProfileLinkIcon"
 import AllMatchLinkIcon from "@/components/ui/icons/AllMatchLinkIcon";
-import { common, error as errorPalette, primary } from "@/theme/palette";
+import { common, primary } from "@/theme/palette";
 import {
   Box,
   Icon,
@@ -137,16 +137,25 @@ const SidebarWrapper = styled(Box, {
       flexShrink: 0,
     },
     ".dashboardLogoutButton": {
-      color: errorPalette.main,
+      color: primary.main,
+      border: `1px solid ${primary.light}`,
+      justifyContent: "center",
+      ".dashboardLinkText": {
+        color: primary.main,
+      },
+      ".dashboardLinkIcon": {
+        color: primary.main,
+      },
       "&:hover": {
-        backgroundColor: "rgba(217, 45, 32, 0.08)",
-        color: errorPalette.main,
+        backgroundColor: common.colorAFECEF66,
+        color: primary.main,
+        borderColor: primary.main,
         "&:before": {
-          backgroundColor: errorPalette.main,
+          backgroundColor: primary.main,
         },
       },
       "&:focus-visible": {
-        outline: `2px solid rgba(217, 45, 32, 0.18)`,
+        outline: `2px solid ${common.colorAFECEF}`,
         outlineOffset: "2px",
       },
       "&.isLoading": {

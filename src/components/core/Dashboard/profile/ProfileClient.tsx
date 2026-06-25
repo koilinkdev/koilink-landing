@@ -237,7 +237,7 @@ const ProfileClient = () => {
               </Grid>
 
               <Grid size={{ xs: 6 }}>
-                <CustomButtonRounded variant='contained' color='error' fullWidth
+                <CustomButtonRounded variant='outlined' color='primary' fullWidth
                   onClick={handleLogoutModal} >
                   Logout
                 </CustomButtonRounded>
