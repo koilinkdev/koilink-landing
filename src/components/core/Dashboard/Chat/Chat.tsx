@@ -41,6 +41,8 @@ import CloseIcon from "@mui/icons-material/Close"
 import CameraAltIcon from "@mui/icons-material/CameraAlt"
 import LocationOnIcon from "@mui/icons-material/LocationOn"
 import ContactPhoneIcon from "@mui/icons-material/ContactPhone"
+import CallIcon from "@mui/icons-material/Call"
+import PersonIcon from "@mui/icons-material/Person"
 import { useSearchParams } from "next/navigation"
 import {
   getSignedReadableImageUrl,
@@ -379,9 +381,205 @@ const buildPresenceStatus = (participant: ChatParticipant | null, isTyping: bool
   return `last seen ${formatLastSeen(participant.lastActive)}`
 }
 
+type ParsedLocation = {
+  lat: number
+  lng: number
+}
+
+type ParsedContact = {
+  name: string
+  phone: string
+}
+
+// Extracts a lat/lng pair from any of the common share formats we (or other
+// apps) might produce: `?q=lat,lng`, a Google `/@lat,lng` path, or a `geo:` URI.
+const parseLatLng = (text: string): ParsedLocation | null => {
+  const match =
+    text.match(/[?&]q=(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/) ||
+    text.match(/@(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/) ||
+    text.match(/geo:(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/i)
+
+  if (!match) {
+    return null
+  }
+
+  const lat = Number(match[1])
+  const lng = Number(match[2])
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    Math.abs(lat) > 90 ||
+    Math.abs(lng) > 180
+  ) {
+    return null
+  }
+
+  return { lat, lng }
+}
+
+const LOCATION_HINT_REGEX = /📍|maps\.google|google\.[a-z.]+\/maps|geo:/i
+
+// A text message is treated as a shared location only when it both *looks* like
+// a location share and yields a valid coordinate pair.
+const parseLocationContent = (text?: string | null): ParsedLocation | null => {
+  if (!text || !LOCATION_HINT_REGEX.test(text)) {
+    return null
+  }
+
+  return parseLatLng(text)
+}
+
+const parseContactContent = (text?: string | null): ParsedContact | null => {
+  if (!text) {
+    return null
+  }
+
+  const trimmed = text.trim()
+  if (!trimmed.startsWith("👤")) {
+    return null
+  }
+
+  const body = trimmed.replace(/^👤\s*Contact:\s*/i, "")
+  // The share format separates name and phone with " — " (em dash).
+  const [namePart, ...phoneParts] = body.split(" — ")
+  const name = namePart.trim() || "Unknown"
+  const phone = phoneParts.join(" — ").trim()
+
+  return { name, phone }
+}
+
+const buildGoogleMapsUrl = (lat: number, lng: number) =>
+  `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+
+// Keyless map thumbnail via the OpenStreetMap embed endpoint (no API key needed).
+// We omit the embed's own marker and overlay our own pin so the centre point
+// reads as a single, prominent WhatsApp-style pin.
+const buildOsmEmbedUrl = (lat: number, lng: number) => {
+  const dLat = 0.0045
+  const dLng = 0.0065
+  const bbox = `${lng - dLng},${lat - dLat},${lng + dLng},${lat + dLat}`
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+    bbox,
+  )}&layer=mapnik`
+}
+
+const URL_SPLIT_REGEX = /(https?:\/\/[^\s]+)/g
+
+// Turns inline URLs in a plain-text message into clickable links.
+const renderTextWithLinks = (text: string) => {
+  const segments = text.split(URL_SPLIT_REGEX)
+
+  return segments.map((segment, index) => {
+    if (!segment) {
+      return null
+    }
+
+    if (/^https?:\/\//.test(segment)) {
+      const href = segment.replace(/[.,;!?)\]]+$/, "")
+      return (
+        <a
+          key={index}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="message-link"
+        >
+          {segment}
+        </a>
+      )
+    }
+
+    return <React.Fragment key={index}>{segment}</React.Fragment>
+  })
+}
+
+const LocationMessageCard: React.FC<{ location: ParsedLocation }> = ({ location }) => {
+  const mapsUrl = buildGoogleMapsUrl(location.lat, location.lng)
+
+  return (
+    <Box className="message_location">
+      <Box
+        component="a"
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="location_map_link"
+        aria-label="Open shared location in Google Maps"
+      >
+        <Box
+          component="iframe"
+          src={buildOsmEmbedUrl(location.lat, location.lng)}
+          className="location_map_frame"
+          loading="lazy"
+          title="Shared location map"
+        />
+        <Box className="location_map_overlay">
+          <LocationOnIcon className="location_pin_icon" />
+        </Box>
+      </Box>
+      <Box className="location_footer">
+        <LocationOnIcon className="location_footer_icon" />
+        <Box className="location_footer_text">
+          <Typography className="location_title">Shared location</Typography>
+          <Typography className="location_coords">
+            {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+          </Typography>
+        </Box>
+        <Box
+          component="a"
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="location_open_btn"
+        >
+          Open
+        </Box>
+      </Box>
+    </Box>
+  )
+}
+
+const ContactMessageCard: React.FC<{ contact: ParsedContact }> = ({ contact }) => {
+  const sanitizedPhone = contact.phone.replace(/[^\d+]/g, "")
+
+  return (
+    <Box className="message_contact">
+      <Box className="contact_avatar">
+        <PersonIcon />
+      </Box>
+      <Box className="contact_info">
+        <Typography className="contact_name">{contact.name}</Typography>
+        {contact.phone ? (
+          <Typography className="contact_phone">{contact.phone}</Typography>
+        ) : (
+          <Typography className="contact_phone">Contact</Typography>
+        )}
+      </Box>
+      {sanitizedPhone ? (
+        <Box
+          component="a"
+          href={`tel:${sanitizedPhone}`}
+          className="contact_call_btn"
+          aria-label={`Call ${contact.name}`}
+        >
+          <CallIcon />
+        </Box>
+      ) : null}
+    </Box>
+  )
+}
+
 const buildMessagePreview = (message: Pick<ChatMessage, "messageType" | "content" | "attachments">) => {
   if (message.messageType === "text") {
-    return message.content || "No messages yet"
+    const content = message.content || ""
+    if (parseLocationContent(content)) {
+      return "📍 Location"
+    }
+    if (parseContactContent(content)) {
+      return "👤 Contact"
+    }
+    return content || "No messages yet"
   }
 
   if (message.messageType === "image") {
@@ -397,6 +595,21 @@ const buildMessagePreview = (message: Pick<ChatMessage, "messageType" | "content
   }
 
   return getAttachmentName(message.attachments[0]) || message.content || "Shared a document"
+}
+
+// Normalises a stored last-message string for the conversation list so shared
+// locations/contacts read as friendly labels instead of raw URLs.
+const formatConversationPreview = (text?: string | null) => {
+  if (!text) {
+    return ""
+  }
+  if (parseLocationContent(text)) {
+    return "📍 Location"
+  }
+  if (parseContactContent(text)) {
+    return "👤 Contact"
+  }
+  return text
 }
 
 const sortConversations = (conversations: ChatConversation[]) => {
@@ -1669,12 +1882,25 @@ const ChatSecClient: React.FC = () => {
 
   const renderMessage = (message: MessageViewModel) => {
     switch (message.type) {
-      case "text":
+      case "text": {
+        const text = message.text || ""
+
+        const location = parseLocationContent(text)
+        if (location) {
+          return <LocationMessageCard location={location} />
+        }
+
+        const contact = parseContactContent(text)
+        if (contact) {
+          return <ContactMessageCard contact={contact} />
+        }
+
         return (
           <Typography variant="body2" className="message-text">
-            {message.text}
+            {renderTextWithLinks(text)}
           </Typography>
         )
+      }
       case "image": {
         const images = message.attachments
         const maxVisible = 4
@@ -1824,8 +2050,10 @@ const ChatSecClient: React.FC = () => {
       status: buildPresenceStatus(conversation.otherUser, conversation.isTyping),
       messages: messageList,
       lastMessageText:
-        conversation.lastMessageText ||
-        (messageList.length > 0 ? messageList[messageList.length - 1]?.text || "Attachment" : "No messages yet"),
+        formatConversationPreview(conversation.lastMessageText) ||
+        (messageList.length > 0
+          ? formatConversationPreview(messageList[messageList.length - 1]?.text) || "Attachment"
+          : "No messages yet"),
     }
   })
 
@@ -1996,7 +2224,13 @@ const ChatSecClient: React.FC = () => {
             <Box className="chat-messages">
               {selectedConversation ? (
                 selectedMessages.length > 0 ? (
-                  selectedMessages.map((message) => (
+                  selectedMessages.map((message) => {
+                  const isLocationMessage =
+                    message.type === "text" && Boolean(parseLocationContent(message.text))
+                  const isContactMessage =
+                    message.type === "text" && Boolean(parseContactContent(message.text))
+
+                  return (
                     <Box key={message.id} className="message-container">
                       <Box
                         className={`message-wrapper ${
@@ -2017,6 +2251,8 @@ const ChatSecClient: React.FC = () => {
                               message.isOwn ? "own" : "other"
                             } ${message.type === "image" ? "image-bubble" : ""} ${
                               message.type === "video" ? "video-bubble" : ""
+                            } ${isLocationMessage ? "location-bubble" : ""} ${
+                              isContactMessage ? "contact-bubble" : ""
                             }`}
                           >
                             {renderMessage(message)}
@@ -2041,7 +2277,8 @@ const ChatSecClient: React.FC = () => {
                         </Box>
                       </Box>
                     </Box>
-                  ))
+                  )
+                })
                 ) : (
                   <Box className="no_chat_cont">
                     {isLoadingMessages

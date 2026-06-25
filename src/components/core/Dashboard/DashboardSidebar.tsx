@@ -7,7 +7,7 @@ import PolicyLinkIcon from "@/components/ui/icons/PolicyLinkIcon";
 import TermsLinkIcon from "@/components/ui/icons/TermsLinkIcon";
 import ContactUsLinkIcon from "@/components/ui/icons/ContactUsLinkIcon";
 import ProfileLinkIcon from "@/components/ui/icons/ProfileLinkIcon"
-// import AllMatchLinkIcon from "@/components/ui/icons/AllMatchLinkIcon";
+import AllMatchLinkIcon from "@/components/ui/icons/AllMatchLinkIcon";
 import { common, error as errorPalette, primary } from "@/theme/palette";
 import {
   Box,
@@ -190,11 +190,11 @@ const DashboardSidebar = ({ open, onClose }: DashboardSidebarProps) => {
       pageLink: "/dashboard",
       icon: <DashboardLinkIcon currentColor={pathname === "/dashboard" ? primary.main : common.color6D9DC5} />,
     },
-    // {
-    //   pageName: "Match Profile",
-    //   pageLink: "/dashboard/match-profile",
-    //   icon: <AllMatchLinkIcon currentColor={pathname === "/dashboard/match-profile" ? primary.main : common.color6D9DC5} />,
-    // },
+    {
+      pageName: "Match Profile",
+      pageLink: "/dashboard/match-profile",
+      icon: <AllMatchLinkIcon currentColor={pathname === "/dashboard/match-profile" ? primary.main : common.color6D9DC5} />,
+    },
      {
       pageName: "Profile",
       pageLink: "/dashboard/profile",
@@ -205,11 +205,6 @@ const DashboardSidebar = ({ open, onClose }: DashboardSidebarProps) => {
       pageLink: "/dashboard/chat",
       icon: <ChatLinkIcon currentColor={pathname === "/dashboard/chat" ? primary.main : common.color6D9DC5} />,
     },
-    // {
-    //   pageName: "Match Profile",
-    //   pageLink: "/dashboard/match-profile",
-    //   icon: <AllMatchLinkIcon currentColor={pathname === "/dashboard/match-profile" ? primary.main : common.color6D9DC5} />,
-    // },
     {
       pageName: "Policy",
       pageLink: "/dashboard/policy",

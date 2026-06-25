@@ -218,6 +218,190 @@ export const ChatClientStyled = styled(Box)`
                 &.video-bubble {
                   padding: 12px;
                 }
+                &.location-bubble {
+                  padding: 0;
+                  overflow: hidden;
+                  min-width: 252px;
+                  max-width: 288px;
+                }
+                &.contact-bubble {
+                  padding: 10px;
+                  min-width: 232px;
+                }
+
+                &.own .contact_avatar {
+                  background: rgba(255, 255, 255, 0.22);
+                  color: ${common.white};
+                }
+                &.other .contact_avatar {
+                  background: rgba(16, 157, 164, 0.1);
+                  color: ${primary.main};
+                }
+
+                .message-text {
+                  white-space: pre-wrap;
+                  overflow-wrap: anywhere;
+                }
+
+                .message-link {
+                  color: inherit;
+                  text-decoration: underline;
+                  text-underline-offset: 2px;
+                  word-break: break-word;
+                }
+
+                .message_location {
+                  display: flex;
+                  flex-direction: column;
+                  width: 100%;
+
+                  .location_map_link {
+                    position: relative;
+                    display: block;
+                    height: 152px;
+                    background: rgba(109, 157, 197, 0.12);
+                    cursor: pointer;
+                  }
+
+                  .location_map_frame {
+                    width: 100%;
+                    height: 100%;
+                    border: 0;
+                    display: block;
+                    pointer-events: none;
+                  }
+
+                  .location_map_overlay {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    pointer-events: none;
+                  }
+
+                  .location_pin_icon {
+                    color: #e5484d;
+                    font-size: 36px;
+                    transform: translateY(-8px);
+                    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+                  }
+
+                  .location_footer {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 10px 12px;
+
+                    .location_footer_icon {
+                      font-size: 22px;
+                      opacity: 0.9;
+                      flex-shrink: 0;
+                    }
+
+                    .location_footer_text {
+                      flex: 1;
+                      min-width: 0;
+                    }
+
+                    .location_title {
+                      font-size: 14px;
+                      font-weight: 600;
+                      line-height: 1.3;
+                    }
+
+                    .location_coords {
+                      font-size: 12px;
+                      opacity: 0.72;
+                      white-space: nowrap;
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                    }
+
+                    .location_open_btn {
+                      flex-shrink: 0;
+                      font-size: 12px;
+                      font-weight: 600;
+                      padding: 5px 14px;
+                      border-radius: 16px;
+                      text-decoration: none;
+                      color: inherit;
+                      border: 1px solid currentColor;
+                      opacity: 0.95;
+                      transition: opacity 0.2s ease;
+
+                      &:hover {
+                        opacity: 1;
+                      }
+                    }
+                  }
+                }
+
+                .message_contact {
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  width: 100%;
+
+                  .contact_avatar {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 50%;
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+
+                    svg {
+                      font-size: 24px;
+                    }
+                  }
+
+                  .contact_info {
+                    flex: 1;
+                    min-width: 0;
+                  }
+
+                  .contact_name {
+                    font-size: 15px;
+                    font-weight: 600;
+                    line-height: 1.3;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  }
+
+                  .contact_phone {
+                    font-size: 13px;
+                    opacity: 0.78;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  }
+
+                  .contact_call_btn {
+                    flex-shrink: 0;
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: inherit;
+                    border: 1px solid currentColor;
+                    text-decoration: none;
+                    opacity: 0.9;
+                    transition: opacity 0.2s ease;
+
+                    &:hover {
+                      opacity: 1;
+                    }
+
+                    svg {
+                      font-size: 20px;
+                    }
+                  }
+                }
 
                 .message_images {
                   position: relative;
