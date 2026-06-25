@@ -149,6 +149,8 @@ interface CustomInputProps {
     disabled?: boolean;
     multiline?: boolean;
     rows?: number;
+    minRows?: number;
+    maxRows?: number;
     sx?: object;
     showAsterisk?: boolean;
     isPhone?: boolean;
@@ -177,6 +179,8 @@ const CustomInputProfile: FC<CustomInputProps> = ({
     multiline = false,
     showAsterisk = false,
     rows = 1,
+    minRows,
+    maxRows,
     sx = {},
     isPhone = false,
     isLocation = false,
@@ -430,7 +434,11 @@ const CustomInputProfile: FC<CustomInputProps> = ({
                     size={size}
                     disabled={disabled}
                     multiline={multiline}
-                    rows={multiline ? rows : undefined}
+                    {...(multiline
+                        ? (minRows != null || maxRows != null
+                            ? { minRows, maxRows }
+                            : { rows })
+                        : {})}
                     slotProps={{
                         input: inputProps
                     }}

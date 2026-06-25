@@ -1,5 +1,4 @@
 "use client"
-import { common } from "@/theme/palette"
 import {
   Box, Grid, Stack, Typography, Icon, List, ListItem, Checkbox, FormControlLabel, DialogActions,
   DialogContent
@@ -138,6 +137,29 @@ const ProfileClient = () => {
     detailItems,
     socialLinks,
   } = React.useMemo(() => buildProfileDisplayData(profile), [profile])
+
+  // Split detail fields by *shape* so long-form essays (e.g. "Use of Funds")
+  // and URLs never get crammed into the compact scalar grid — that uneven
+  // height is what produced the giant empty cards.
+  const { statItems, linkItems, longItems } = React.useMemo(() => {
+    const isUrl = (value: string) => /^(https?:)?\/\//i.test(value.trim())
+    const isLongForm = (value: string) => value.trim().length > 90 || /\r?\n/.test(value)
+
+    const stats: { label: string; value: string }[] = []
+    const links: { label: string; value: string }[] = []
+    const longs: { label: string; value: string }[] = []
+
+    for (const item of detailItems) {
+      const value = String(item.value ?? "")
+      if (isUrl(value)) links.push({ label: item.label, value })
+      else if (isLongForm(value)) longs.push({ label: item.label, value })
+      else stats.push({ label: item.label, value })
+    }
+
+    return { statItems: stats, linkItems: links, longItems: longs }
+  }, [detailItems])
+
+  const hasDetails = statItems.length > 0 || linkItems.length > 0 || longItems.length > 0
 
   const isExternalAvatar = /^(https?:)?\/\//.test(avatarSrc) || avatarSrc.startsWith("data:") || avatarSrc.startsWith("blob:")
 
@@ -284,144 +306,115 @@ const ProfileClient = () => {
 
         <Grid size={{ xs: 12, xl: 7, md: 6 }}>
           <Box className="profileRight">
-            <Grid container rowSpacing={1.25}>
-              <Grid size={{ xs: 12 }}>
-                <Box sx={{ mb: 2 }}>
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Typography variant='h3' className='profile_rightSec_common_header_text'>
-                      {nameWithAge}
-                    </Typography>
-                    {isVerified && (
-                      <Icon sx={{ width: "auto", height: "auto", display: "flex" }}>
-                        <Image src="/assets/icons/verified-greenTick-profile.svg" alt="verified icon" width={16} height={16} />
-                      </Icon>
-                    )}
-                  </Stack>
-                  <Typography variant='caption' className='profile_rightSec_common_header_subtext'>{roleLabel}</Typography>
-                </Box>
-                <List disablePadding className="banner_list_company">
-                  <ListItem disablePadding className='profile_rightSec_common_header_subtext'>{companyLinePrimary}</ListItem>
-                  <ListItem disablePadding className='profile_rightSec_common_header_subtext'>{companyLineSecondary}</ListItem>
-                </List>
-                <Stack className='profile_rightSec_address_cont' direction="row" spacing={1} alignItems="center">
+
+            {/* Identity */}
+            <Box className="profileIdentity">
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Typography component="h2" className="identityName">
+                  {nameWithAge}
+                </Typography>
+                {isVerified && (
                   <Icon sx={{ width: "auto", height: "auto", display: "flex" }}>
-                    <Image src="/assets/icons/location-icon-profile-right.svg" alt="location icon" width={16} height={16} />
+                    <Image src="/assets/icons/verified-greenTick-profile.svg" alt="verified icon" width={16} height={16} />
                   </Icon>
-                  <List disablePadding className="banner_list_address">
-                    <ListItem disablePadding className='profile_rightSec_common_header_subtext'>{locationLinePrimary}</ListItem>
-                  </List>
-                </Stack>
-              </Grid>
-
-              <Grid size={{ xs: 12 }}>
-                {detailItems.length > 0 && (
-                  <>
-                    <Typography variant='h3' className='profile_rightSec_common_header_text' sx={{ mb: 1.5 }}>Profile Details</Typography>
-                    <Grid container spacing={1.25} sx={{ mb: 0.5 }}>
-                      {detailItems.map((item) => (
-                        <Grid key={item.label} size={{ xs: 12, sm: 6 }}>
-                          <Box
-                            sx={{
-                              p: 1.5,
-                              borderRadius: "16px",
-                              border: `1px solid ${common.colorE8EBEC}`,
-                              backgroundColor: common.white,
-                              height: "100%",
-                            }}
-                          >
-                            <Typography
-                              sx={{
-                                mb: 0.5,
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                letterSpacing: "0.06em",
-                                textTransform: "uppercase",
-                                color: common.color6D9DC5,
-                              }}
-                            >
-                              {item.label}
-                            </Typography>
-                            <Typography
-                              sx={{
-                                fontSize: "13px",
-                                lineHeight: 1.5,
-                                color: common.color31445A,
-                                wordBreak: "break-word",
-                              }}
-                            >
-                              {item.value}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </>
                 )}
-              </Grid>
+              </Stack>
+              <Typography className="identityRole">{roleLabel}</Typography>
 
-              <Grid size={{ xs: 12 }}>
-                <Typography variant='h3' className='profile_rightSec_common_header_text' sx={{ mb: 1.5 }}>About</Typography>
-                {aboutItems.length > 0 ? (
-                  <List disablePadding className='profile_rightSec_about_li_cont'>
-                    {aboutItems.map((textContent: string, index: number) => {
-                      const words = textContent.trim().split(" ")
-                      const firstWord = words.shift()
-                      const restOfContent = words.join(" ")
-                      return (
-                        <ListItem key={index} className='profile_rightSec_about_li_item' disablePadding alignItems='flex-start' sx={{ fontSize: 12, color: common.color6D9DC5 }} >
-                          <Typography
-                            variant='caption'
-                            fontSize={12}
-                            fontWeight={600}
-                            mr={"6px"}
-                          >
-                            {index + 1}.
-                          </Typography>
-                          <Typography
-                            variant='body1'
-                            fontSize={12}
-                            fontWeight={400}
-                          >
-                            <Typography
-                              variant='caption'
-                              fontWeight={600}
-                            >
-                              {firstWord}
-                            </Typography>
-                            {" "}
-                            {restOfContent}
-                          </Typography>
-                        </ListItem>
-                      )
-                    })}
-                  </List>
-                ) : (
-                  <Typography variant='caption' className='profile_rightSec_common_header_subtext'>
-                    Add about text from Edit Profile to show it here.
-                  </Typography>
+              <List disablePadding className="banner_list_company">
+                {companyLinePrimary && <ListItem disablePadding>{companyLinePrimary}</ListItem>}
+                {companyLineSecondary && <ListItem disablePadding>{companyLineSecondary}</ListItem>}
+              </List>
+
+              <Stack className="profile_rightSec_address_cont" direction="row" spacing={1}>
+                <Icon sx={{ width: "auto", height: "auto", display: "flex", mt: "2px" }}>
+                  <Image src="/assets/icons/location-icon-profile-right.svg" alt="location icon" width={16} height={16} />
+                </Icon>
+                <List disablePadding className="banner_list_address">
+                  <ListItem disablePadding>{locationLinePrimary}</ListItem>
+                </List>
+              </Stack>
+            </Box>
+
+            {/* Profile Details */}
+            {hasDetails && (
+              <Box className="profileSection">
+                <Typography className="sectionHeader">Profile Details</Typography>
+
+                {statItems.length > 0 && (
+                  <Box className="statGrid">
+                    {statItems.map((item) => (
+                      <Box key={item.label} className="statCard">
+                        <Typography component="span" className="statLabel">{item.label}</Typography>
+                        <Typography component="span" className="statValue">{item.value}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
                 )}
-              </Grid>
 
-              <Grid size={{ xs: 12 }}>
-                <Typography variant='h3' className='profile_rightSec_common_header_text' sx={{ mb: 1.5 }}>Key Data</Typography>
-                <InvestorProfileTable
-                  role={roleType}
-                  items={keyDataItems}
-                  emptyMessage="Add key data from Edit Profile to show quick profile snapshots here."
-                />
-              </Grid>
+                {(linkItems.length > 0 || longItems.length > 0) && (
+                  <Box className="panelStack">
+                    {linkItems.map((item) => (
+                      <Box key={item.label} className="fieldPanel">
+                        <Typography component="span" className="panelLabel">{item.label}</Typography>
+                        <Link href={item.value} target="_blank" rel="noreferrer" className="panelLink">
+                          {item.value}
+                        </Link>
+                      </Box>
+                    ))}
+                    {longItems.map((item) => (
+                      <Box key={item.label} className="fieldPanel">
+                        <Typography component="span" className="panelLabel">{item.label}</Typography>
+                        <Typography className="panelText">{item.value}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            )}
 
-              <Grid size={{ xs: 12 }}>
-                <Typography variant='h3' className='profile_rightSec_common_header_text' sx={{ mb: 1.5 }}>Documents</Typography>
-                <ProfileDocumentsDisplay
-                  documents={documents}
-                  openingDocumentId={openingDocumentId}
-                  onOpen={handleOpenDocument}
-                  emptyMessage="Add documents from Edit Profile to show them here."
-                />
-              </Grid>
+            {/* About */}
+            <Box className="profileSection">
+              <Typography className="sectionHeader">About</Typography>
+              {aboutItems.length > 0 ? (
+                <Box className="aboutList">
+                  {aboutItems.map((textContent: string, index: number) => (
+                    <Box key={index} className="aboutItem">
+                      {aboutItems.length > 1 && (
+                        <Typography component="span" className="aboutIndex">{index + 1}.</Typography>
+                      )}
+                      <Typography component="p" className="aboutText">{textContent}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography className="emptyHint">
+                  Add about text from Edit Profile to show it here.
+                </Typography>
+              )}
+            </Box>
 
-            </Grid>
+            {/* Key Data */}
+            <Box className="profileSection">
+              <Typography className="sectionHeader">Key Data</Typography>
+              <InvestorProfileTable
+                role={roleType}
+                items={keyDataItems}
+                emptyMessage="Add key data from Edit Profile to show quick profile snapshots here."
+              />
+            </Box>
+
+            {/* Documents */}
+            <Box className="profileSection">
+              <Typography className="sectionHeader">Documents</Typography>
+              <ProfileDocumentsDisplay
+                documents={documents}
+                openingDocumentId={openingDocumentId}
+                onOpen={handleOpenDocument}
+                emptyMessage="Add documents from Edit Profile to show them here."
+              />
+            </Box>
+
           </Box>
         </Grid>
 

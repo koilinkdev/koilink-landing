@@ -1,13 +1,18 @@
 "use client";
 
 import React from "react";
-import { Box, IconButton, Stack, Typography } from "@mui/material";
+import { Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import CustomInputProfile from "@/components/ui/Dashboard/CustomInputProfile";
 import CustomSelectProfile, { StyledLabel } from "@/components/ui/Dashboard/CustomSelectTagProfile";
 import { common, primary } from "@/theme/palette";
-import { getKeyDataOptions, KEY_DATA_MAX_ITEMS, KeyDataEntry } from "@/lib/keyData";
+import {
+  getKeyDataColumnLabels,
+  getKeyDataOptions,
+  KEY_DATA_MAX_ITEMS,
+  KeyDataEntry,
+} from "@/lib/keyData";
 
 export type KeyDataRowError = {
   field?: string;
@@ -27,31 +32,29 @@ type KeyDataEditorProps = {
 };
 
 const actionButtonStyles = {
-  width: 44,
-  height: 44,
-  borderRadius: "12px",
+  width: 40,
+  height: 40,
+  borderRadius: "10px",
   border: `1px solid ${common.colorE8EBEC}`,
   backgroundColor: common.white,
   color: primary.main,
   "&:hover": {
     backgroundColor: common.colorAFECEF66,
   },
+  "&.Mui-disabled": {
+    borderColor: common.colorE5ECF6,
+    color: common.colorA7B4BF,
+  },
 };
 
-const sectionStyles = {
-  px: { xs: 1.5, sm: 2 },
-  py: { xs: 1.25, sm: 1.5 },
-};
-
+// Auto-grow textareas: start at two rows and expand with content instead of
+// rendering a fixed, mostly-empty tall box for short one-line answers.
 const multilineFieldStyles = {
   "& .MuiOutlinedInput-root": {
     alignItems: "flex-start",
   },
   "& .MuiInputBase-inputMultiline": {
     padding: "10px 12px",
-  },
-  "& textarea": {
-    minHeight: "64px !important",
   },
 };
 
@@ -67,140 +70,134 @@ const KeyDataEditor = ({
   onBlur,
 }: KeyDataEditorProps) => {
   const keyDataOptions = React.useMemo(() => getKeyDataOptions(role), [role]);
+  const columnLabels = React.useMemo(() => getKeyDataColumnLabels(role), [role]);
+  const canAddMore = value.length < KEY_DATA_MAX_ITEMS;
 
   return (
     <Box>
       <StyledLabel>Key Data</StyledLabel>
+      <Typography
+        sx={{
+          mt: -0.25,
+          mb: 1.5,
+          fontSize: "12px",
+          lineHeight: 1.5,
+          color: common.color6D9DC5,
+        }}
+      >
+        Add quick snapshots that appear as a table on your profile. Pair each field with the
+        investor and company perspective. You can add up to {KEY_DATA_MAX_ITEMS} rows.
+      </Typography>
 
-      <Stack spacing={2}>
+      <Stack spacing={1.5}>
         {value.map((item, index) => {
           const rowError = rowErrors[index];
+          const hasRowError = Boolean(showErrors && (rowError?.field || rowError?.details));
           const canRemove = value.length > 1;
-          const canAdd = index === value.length - 1 && value.length < KEY_DATA_MAX_ITEMS;
 
           return (
             <Box
               key={`key-data-row-${index}`}
               sx={{
-                borderRadius: "18px",
-                border: `1px solid ${
-                  showErrors && (rowError?.field || rowError?.details)
-                    ? "#d32f2f"
-                    : common.colorE8EBEC
-                }`,
+                borderRadius: "16px",
+                border: `1px solid ${hasRowError ? "#d32f2f" : common.colorE8EBEC}`,
                 backgroundColor: common.white,
-                overflow: "hidden",
+                p: { xs: 1.5, sm: 2 },
               }}
             >
-              <Box sx={sectionStyles}>
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1}
-                  alignItems={{ xs: "stretch", sm: "flex-end" }}
-                >
-                  <Box sx={{ flex: 1 }}>
-                    <CustomSelectProfile
-                      label={`Field ${value.length > 1 ? index + 1 : ""}`.trim()}
-                      value={item.field}
-                      onChange={(event) => onChange(index, "field", String(event.target.value))}
-                      onBlur={onBlur}
-                      options={keyDataOptions}
-                      placeholder="Select a field"
-                      error={Boolean(showErrors && rowError?.field)}
-                      helperText={showErrors ? rowError?.field : ""}
-                    />
-                  </Box>
+              <Stack direction="row" spacing={1} alignItems="flex-end">
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <CustomSelectProfile
+                    label={`Field ${index + 1}`}
+                    value={item.field}
+                    onChange={(event) => onChange(index, "field", String(event.target.value))}
+                    onBlur={onBlur}
+                    options={keyDataOptions}
+                    placeholder="Select a field"
+                    error={Boolean(showErrors && rowError?.field)}
+                    helperText={showErrors ? rowError?.field : ""}
+                  />
+                </Box>
 
-                  <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-                    {canRemove && (
-                      <IconButton
-                        onClick={() => onRemove(index)}
-                        aria-label={`Remove key data row ${index + 1}`}
-                        sx={{
-                          ...actionButtonStyles,
-                          color: "#d32f2f",
-                        }}
-                      >
-                        <DeleteOutlineRoundedIcon />
-                      </IconButton>
-                    )}
-                    {canAdd && (
-                      <IconButton
-                        onClick={onAdd}
-                        aria-label="Add another key data row"
-                        sx={actionButtonStyles}
-                      >
-                        <AddRoundedIcon />
-                      </IconButton>
-                    )}
-                  </Stack>
-                </Stack>
-              </Box>
+                <Tooltip title={canRemove ? "Remove row" : "Keep at least one row"}>
+                  <span>
+                    <IconButton
+                      onClick={() => onRemove(index)}
+                      disabled={!canRemove}
+                      aria-label={`Remove key data row ${index + 1}`}
+                      sx={{ ...actionButtonStyles, color: canRemove ? "#d32f2f" : common.colorA7B4BF }}
+                    >
+                      <DeleteOutlineRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Stack>
 
-              <Box sx={{ ...sectionStyles, borderTop: `1px solid ${common.colorE8EBEC}` }}>
-                <CustomInputProfile
-                  label="Investor"
-                  value={item.investor}
-                  onChange={(event) => onChange(index, "investor", event.target.value)}
-                  onBlur={onBlur}
-                  placeholder="Add the investor perspective"
-                  multiline
-                  rows={2}
-                  sx={multilineFieldStyles}
-                />
-              </Box>
-
-              <Box sx={{ ...sectionStyles, borderTop: `1px solid ${common.colorE8EBEC}` }}>
-                <CustomInputProfile
-                  label="Company"
-                  value={item.company}
-                  onChange={(event) => onChange(index, "company", event.target.value)}
-                  onBlur={onBlur}
-                  placeholder="Add the company perspective"
-                  multiline
-                  rows={2}
-                  sx={multilineFieldStyles}
-                />
-              </Box>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.5}
+                sx={{ mt: 1.5 }}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <CustomInputProfile
+                    label={columnLabels.investor}
+                    value={item.investor}
+                    onChange={(event) => onChange(index, "investor", event.target.value)}
+                    onBlur={onBlur}
+                    placeholder="Add the investor perspective"
+                    multiline
+                    minRows={2}
+                    maxRows={6}
+                    sx={multilineFieldStyles}
+                  />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <CustomInputProfile
+                    label={columnLabels.company}
+                    value={item.company}
+                    onChange={(event) => onChange(index, "company", event.target.value)}
+                    onBlur={onBlur}
+                    placeholder="Add the company perspective"
+                    multiline
+                    minRows={2}
+                    maxRows={6}
+                    sx={multilineFieldStyles}
+                  />
+                </Box>
+              </Stack>
 
               {showErrors && rowError?.details && (
-                <Box sx={{ ...sectionStyles, pt: 0, borderTop: `1px solid ${common.colorE8EBEC}` }}>
-                  <Typography
-                    sx={{
-                      fontSize: "12px",
-                      lineHeight: 1.5,
-                      color: "#d32f2f",
-                    }}
-                  >
-                    {rowError.details}
-                  </Typography>
-                </Box>
+                <Typography sx={{ mt: 1, fontSize: "12px", lineHeight: 1.5, color: "#d32f2f" }}>
+                  {rowError.details}
+                </Typography>
               )}
             </Box>
           );
         })}
       </Stack>
 
-      <Typography
-        sx={{
-          mt: 1,
-          fontSize: "12px",
-          lineHeight: 1.5,
-          color: common.color6D9DC5,
-        }}
-      >
-        You can add up to {KEY_DATA_MAX_ITEMS} rows. Leave the section empty if you do not want to show key data yet.
-      </Typography>
-
-      {showErrors && sectionError && (
-        <Typography
+      <Box sx={{ mt: 1.5 }}>
+        <IconButton
+          onClick={onAdd}
+          disabled={!canAddMore}
+          aria-label="Add another key data row"
           sx={{
-            mt: 0.5,
-            fontSize: "12px",
-            lineHeight: 1.5,
-            color: "#d32f2f",
+            ...actionButtonStyles,
+            width: "auto",
+            px: 1.5,
+            borderRadius: "10px",
+            gap: 0.5,
+            fontSize: "14px",
+            fontWeight: 500,
           }}
         >
+          <AddRoundedIcon fontSize="small" />
+          <Box component="span" sx={{ fontSize: "14px" }}>Add row</Box>
+        </IconButton>
+      </Box>
+
+      {showErrors && sectionError && (
+        <Typography sx={{ mt: 1, fontSize: "12px", lineHeight: 1.5, color: "#d32f2f" }}>
           {sectionError}
         </Typography>
       )}

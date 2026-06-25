@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Box, Grid, SelectChangeEvent, IconButton, Dialog, DialogContent, Stack, Typography, CircularProgress, Snackbar } from "@mui/material";
+import { Box, Grid, SelectChangeEvent, IconButton, Dialog, DialogContent, Stack, Typography, CircularProgress, Snackbar, TextareaAutosize } from "@mui/material";
 import Image from "next/image";
 import * as Yup from "yup";
 import CameraAltRoundedIcon from "@mui/icons-material/CameraAltRounded";
@@ -10,13 +10,6 @@ import CameraswitchRoundedIcon from "@mui/icons-material/CameraswitchRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import FormatBoldRoundedIcon from "@mui/icons-material/FormatBoldRounded";
-import FormatItalicRoundedIcon from "@mui/icons-material/FormatItalicRounded";
-import FormatUnderlinedRoundedIcon from "@mui/icons-material/FormatUnderlinedRounded";
-import StrikethroughSRoundedIcon from "@mui/icons-material/StrikethroughSRounded";
-import FormatAlignLeftRoundedIcon from "@mui/icons-material/FormatAlignLeftRounded";
-import FormatAlignCenterRoundedIcon from "@mui/icons-material/FormatAlignCenterRounded";
-import FormatAlignRightRoundedIcon from "@mui/icons-material/FormatAlignRightRounded";
 import CustomInputProfile from "@/components/ui/Dashboard/CustomInputProfile";
 import CustomSelectProfile from "@/components/ui/Dashboard/CustomSelectTagProfile";
 import { StyledLabel } from "@/components/ui/Dashboard/CustomSelectTagProfile";
@@ -369,31 +362,40 @@ type RichTextPanelProps = {
   error?: boolean;
   helperText?: string;
   placeholder?: string;
+  maxLength?: number;
 };
 
-const RichTextPanel = ({ label, value, onChange, onBlur, error, helperText, placeholder }: RichTextPanelProps) => {
+const RichTextPanel = ({ label, value, onChange, onBlur, error, helperText, placeholder, maxLength }: RichTextPanelProps) => {
+  const count = value.length;
+  const nearLimit = typeof maxLength === "number" && count > maxLength * 0.9;
+  const overLimit = typeof maxLength === "number" && count > maxLength;
+
   return (
     <Box className="editor_panel_wrap">
       <StyledLabel>{label}</StyledLabel>
-      <Box className={`editor_panel ${error ? "has_error" : ""}`}>
-        <Box className="editor_toolbar">
-          <Typography className="tool_text">14</Typography>
-          <IconButton size="small" className="tool_btn"><FormatBoldRoundedIcon fontSize="small" /></IconButton>
-          <IconButton size="small" className="tool_btn"><FormatItalicRoundedIcon fontSize="small" /></IconButton>
-          <IconButton size="small" className="tool_btn"><FormatUnderlinedRoundedIcon fontSize="small" /></IconButton>
-          <IconButton size="small" className="tool_btn"><StrikethroughSRoundedIcon fontSize="small" /></IconButton>
-          <Box className="tool_dot" />
-          <IconButton size="small" className="tool_btn"><FormatAlignLeftRoundedIcon fontSize="small" /></IconButton>
-          <IconButton size="small" className="tool_btn"><FormatAlignCenterRoundedIcon fontSize="small" /></IconButton>
-          <IconButton size="small" className="tool_btn"><FormatAlignRightRoundedIcon fontSize="small" /></IconButton>
-        </Box>
-        <textarea
+      <Box className={`editor_panel ${error || overLimit ? "has_error" : ""}`}>
+        <TextareaAutosize
           className="editor_textarea"
           value={value}
           onChange={onChange}
           onBlur={onBlur}
           placeholder={placeholder}
+          minRows={8}
+          maxRows={20}
         />
+        <Box className="editor_footer">
+          <Typography component="span" className="editor_hint">
+            Tip: separate ideas with a blank line to show them as distinct points on your profile.
+          </Typography>
+          {typeof maxLength === "number" && (
+            <Typography
+              component="span"
+              className={`editor_count ${overLimit ? "over" : nearLimit ? "near" : ""}`}
+            >
+              {count}/{maxLength}
+            </Typography>
+          )}
+        </Box>
       </Box>
       {helperText && <Typography className={`editor_helper ${error ? "error" : ""}`}>{helperText}</Typography>}
     </Box>
@@ -2028,15 +2030,13 @@ const EditProfileClient = () => {
                     onBlur={handleBlur("useOfFunds")}
                     placeholder="Product development, hiring, marketing..."
                     multiline
-                    rows={4}
+                    minRows={4}
+                    maxRows={12}
                     error={Boolean(touched.useOfFunds && errors.useOfFunds)}
                     helperText={touched.useOfFunds ? errors.useOfFunds : ""}
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         alignItems: "flex-start",
-                      },
-                      "& textarea": {
-                        minHeight: "96px !important",
                       },
                     }}
                   />
@@ -2157,6 +2157,7 @@ const EditProfileClient = () => {
                 placeholder="Write a short summary about yourself or your business..."
                 error={Boolean(touched.about && errors.about)}
                 helperText={touched.about ? errors.about : ""}
+                maxLength={5000}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>

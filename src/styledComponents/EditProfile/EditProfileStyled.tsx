@@ -69,70 +69,72 @@ export const AboutEditProfileClientStyled = styled(Box)`
 
       .editor_panel {
         border: 1px solid ${common.colorE8EBEC};
-        border-radius: 20px;
+        border-radius: 12px;
         overflow: hidden;
         background: ${common.white};
-        min-height: 240px;
         flex: 1;
         display: flex;
         flex-direction: column;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+        &:focus-within {
+          border-color: ${primary.main};
+          box-shadow: 0 0 0 1px ${primary.main};
+        }
         &.has_error {
           border-color: #d32f2f;
-        }
-      }
-
-      .editor_toolbar {
-        height: 48px;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        padding: 0 10px;
-        border-bottom: 1px solid ${common.colorE8EBEC};
-        background: ${background.paper};
-        flex-shrink: 0;
-
-        .tool_text {
-          font-size: 20px;
-          color: ${common.color6D9DC5};
-          min-width: 28px;
-        }
-
-        .tool_btn {
-          color: ${common.color6D9DC5};
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          &:hover {
-            background: ${common.colorAFECEF66};
+          &:focus-within {
+            box-shadow: 0 0 0 1px #d32f2f;
           }
-        }
-
-        .tool_dot {
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          background: ${common.color6D9DC5};
-          margin: 0 6px;
-          opacity: 0.75;
         }
       }
 
       .editor_textarea {
+        display: block;
         width: 100%;
-        min-height: 180px;
+        box-sizing: border-box;
         flex: 1;
         border: 0;
         outline: 0;
-        resize: vertical;
+        resize: none;
         padding: 14px 16px;
         font-size: 14px;
-        line-height: 1.5;
+        line-height: 1.6;
         color: ${primary.main};
         font-family: inherit;
         background: ${common.white};
 
         &::placeholder {
           color: ${common.colorA7B4BF};
+        }
+      }
+
+      .editor_footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 16px;
+        border-top: 1px solid ${common.colorE8EBEC};
+        background: ${background.paper};
+
+        .editor_hint {
+          font-size: 11.5px;
+          line-height: 1.4;
+          color: ${common.color6D9DC5};
+        }
+
+        .editor_count {
+          flex-shrink: 0;
+          font-size: 12px;
+          font-weight: 500;
+          color: ${common.color6D9DC5};
+          &.near {
+            color: #B7791F;
+          }
+          &.over {
+            color: #d32f2f;
+          }
         }
       }
 
