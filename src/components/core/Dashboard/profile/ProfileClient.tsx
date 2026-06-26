@@ -9,6 +9,7 @@ import Image from "next/image"
 import Link from "next/link"
 import InvestorProfileTable from "@/styledComponents/Profile/InvesterProfileTable"
 import ProfileDocumentsDisplay from "@/components/ui/Dashboard/ProfileDocumentsDisplay"
+import ProfileGalleryCarousel from "@/components/ui/Dashboard/ProfileGalleryCarousel"
 import { ProfileClientStyled } from "@/styledComponents/Profile/ProfileClientStyled"
 import DashboardModal from "@/components/ui/Dashboard/DashboardModal"
 import { CustomButtonTransparent } from "@/components/ui/Dashboard/CustomButtonTransparent"
@@ -38,6 +39,7 @@ const ProfileClient = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [profile, setProfile] = React.useState<any>(null)
   const [avatarSrc, setAvatarSrc] = React.useState<string>("/assets/images/profile-avatar.svg")
+  const [galleryImages, setGalleryImages] = React.useState<string[]>([])
   const [isLoadingHeader, setIsLoadingHeader] = React.useState(true)
   const [openingDocumentId, setOpeningDocumentId] = React.useState<string | null>(null)
 
@@ -112,6 +114,27 @@ const ProfileClient = () => {
         } catch {
           setAvatarSrc(data.profile.profilePhoto)
         }
+      }
+
+      const rawGallery: string[] = Array.isArray(data.profile.galleryPhotos)
+        ? data.profile.galleryPhotos.filter(
+            (url: unknown): url is string => typeof url === "string" && url.trim().length > 0,
+          )
+        : []
+
+      if (rawGallery.length > 0) {
+        const signedGallery = await Promise.all(
+          rawGallery.map(async (url) => {
+            try {
+              return await getSignedReadableImageUrl(token, url)
+            } catch {
+              return url
+            }
+          }),
+        )
+        setGalleryImages(signedGallery)
+      } else {
+        setGalleryImages([])
       }
     } catch {
     } finally {
@@ -199,15 +222,19 @@ const ProfileClient = () => {
         <Grid size={{ xs: 12, xl: 5, md: 6 }}>
           <Box className="profileLeft">
             <Box sx={{ position: "relative" }}>
-              <figure className='profileLeftImgWrap'>
-                <Image
-                  src={avatarSrc}
-                  alt='avatar'
-                  width={420}
-                  height={370}
-                  unoptimized={isExternalAvatar}
-                />
-              </figure>
+              {galleryImages.length > 0 ? (
+                <ProfileGalleryCarousel images={galleryImages} alt='Profile photo' />
+              ) : (
+                <figure className='profileLeftImgWrap'>
+                  <Image
+                    src={avatarSrc}
+                    alt='avatar'
+                    width={420}
+                    height={370}
+                    unoptimized={isExternalAvatar}
+                  />
+                </figure>
+              )}
             </Box>
 
             {socialLinks.length > 0 && (

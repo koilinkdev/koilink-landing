@@ -312,6 +312,67 @@ export const MatchProfileClientStyled = styled(Box)`
     background: linear-gradient(180deg, rgba(13, 28, 46, 0.5), transparent);
   }
 
+  /* Photo carousel: segment indicators across the top */
+  .cardPhotoSegments {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    right: 14px;
+    z-index: 4;
+    display: flex;
+    gap: 4px;
+    pointer-events: none;
+  }
+  .cardPhotoSegment {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 2px rgba(13, 28, 46, 0.25);
+    transition: background-color 0.25s ease;
+    &.isActive {
+      background-color: rgba(255, 255, 255, 0.95);
+    }
+  }
+
+  /* Photo carousel: arrow buttons (kept in the upper area, clear of the identity bar) */
+  .cardPhotoArrow {
+    position: absolute;
+    top: 42%;
+    transform: translateY(-50%);
+    z-index: 4;
+    width: 34px;
+    height: 34px;
+    color: ${common.white};
+    background-color: rgba(13, 28, 46, 0.34);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(8px);
+    transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+    opacity: 0;
+
+    svg {
+      font-size: 22px;
+    }
+    &:hover {
+      background-color: rgba(13, 28, 46, 0.6);
+    }
+    &.left {
+      left: 10px;
+    }
+    &.right {
+      right: 10px;
+    }
+  }
+  .matchDeckCard:hover .cardPhotoArrow {
+    opacity: 1;
+  }
+  /* Touch devices have no hover — keep the arrows visible there */
+  @media (hover: none) {
+    .cardPhotoArrow {
+      opacity: 1;
+    }
+  }
+
   .cardTopMeta {
     position: absolute;
     top: 16px;

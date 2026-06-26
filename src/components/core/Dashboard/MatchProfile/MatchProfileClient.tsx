@@ -76,7 +76,7 @@ const MatchProfileClient = () => {
   const dragStartXRef = React.useRef<number | null>(null)
   const pointerIdRef = React.useRef<number | null>(null)
   const animationTimerRef = React.useRef<number | null>(null)
-  const getCardImage = useResolvedMatchImages(profiles, activeIndex)
+  const { getCardImage, getCardImages } = useResolvedMatchImages(profiles, activeIndex)
 
   const currentProfile = profiles[activeIndex] ?? null
   const nextProfiles = React.useMemo(
@@ -473,6 +473,7 @@ const MatchProfileClient = () => {
             nextCardScale={nextCardScale}
             remainingCount={remainingCount}
             getCardImage={getCardImage}
+            getCardImages={getCardImages}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

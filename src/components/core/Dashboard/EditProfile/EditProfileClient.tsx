@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import { Box, Grid, SelectChangeEvent, IconButton, Dialog, DialogContent, Stack, Typography, CircularProgress, Snackbar, TextareaAutosize } from "@mui/material";
-import Image from "next/image";
 import * as Yup from "yup";
 import CameraAltRoundedIcon from "@mui/icons-material/CameraAltRounded";
 import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
@@ -15,6 +14,7 @@ import CustomSelectProfile from "@/components/ui/Dashboard/CustomSelectTagProfil
 import { StyledLabel } from "@/components/ui/Dashboard/CustomSelectTagProfile";
 import KeyDataEditor, { KeyDataRowError } from "@/components/ui/Dashboard/KeyDataEditor";
 import ProfileDocumentsSection from "@/components/ui/Dashboard/ProfileDocumentsSection";
+import ProfileGallerySection from "@/components/ui/Dashboard/ProfileGallerySection";
 import { CustomButtonRounded } from "@/components/ui/Dashboard/CustomButtonRounded";
 import { CustomButtonTransparent } from "@/components/ui/Dashboard/CustomButtonTransparent";
 import { AboutEditProfileClientStyled } from "@/styledComponents/EditProfile/EditProfileStyled";
@@ -27,6 +27,14 @@ import {
   getDocumentTypeOptions,
   ProfileDocument,
 } from "@/lib/profileDocuments";
+import {
+  createGalleryId,
+  GalleryPhoto,
+  isAcceptedGalleryFile,
+  MAX_GALLERY_FILE_SIZE,
+  MAX_GALLERY_PHOTOS,
+  toGalleryUrls,
+} from "@/lib/profileGallery";
 
 type FormData = {
   fullName: string;
@@ -506,9 +514,10 @@ const EditProfileClient = () => {
   const isBroker = profileRole === "broker";
   const validationSchema = React.useMemo(() => buildValidationSchema(profileRole), [profileRole]);
   const [selectedCountryCode, setSelectedCountryCode] = React.useState<string>("IN");
-  const [avatarSrc, setAvatarSrc] = React.useState<string>("/assets/icons/User-image-edit-profile.svg");
-  const [selectedAvatarFile, setSelectedAvatarFile] = React.useState<File | null>(null);
-  const [persistedProfilePhotoUrl, setPersistedProfilePhotoUrl] = React.useState<string | undefined>(undefined);
+  // Photos are unified: the gallery is the single source of truth and gallery[0] is the cover/profile photo.
+  const [galleryPhotos, setGalleryPhotos] = React.useState<GalleryPhoto[]>([]);
+  const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
+  const galleryObjectUrlsRef = React.useRef<Set<string>>(new Set());
   const [documents, setDocuments] = React.useState<ProfileDocument[]>([]);
   const [selectedDocumentType, setSelectedDocumentType] = React.useState<string>("");
   const [selectedDocumentFile, setSelectedDocumentFile] = React.useState<File | null>(null);
@@ -529,7 +538,6 @@ const EditProfileClient = () => {
     () => [...countries].sort((a, b) => b.dialCode.length - a.dialCode.length),
     [],
   );
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const documentInputRef = React.useRef<HTMLInputElement>(null);
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -661,16 +669,6 @@ const EditProfileClient = () => {
     }));
   }, []);
 
-  const previewAvatarFile = React.useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e: ProgressEvent<FileReader>) => {
-      if (e.target?.result) {
-        setAvatarSrc(e.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
   const getSignedReadableUploadUrl = React.useCallback(async (token: string, source: { key?: string; url?: string }) => {
     const response = await fetch(`${API_BASE_URL}/uploads/sign-read`, {
       method: "POST",
@@ -792,18 +790,48 @@ const EditProfileClient = () => {
           about: profile.bio ?? "",
         }));
 
-        if (profile.profilePhoto) {
-          setPersistedProfilePhotoUrl(profile.profilePhoto);
-          try {
-            const signedReadUrl = await getSignedReadableUploadUrl(token, { url: profile.profilePhoto });
-            setAvatarSrc(signedReadUrl);
-          } catch {
-            setAvatarSrc(profile.profilePhoto);
-          }
+        // Unified photos: prefer the gallery; fall back to the legacy single profilePhoto so
+        // existing users keep their picture (it simply becomes the cover/first gallery item).
+        const rawGalleryUrls: string[] = Array.isArray(profile.galleryPhotos)
+          ? profile.galleryPhotos.filter(
+              (url: unknown): url is string => typeof url === "string" && url.trim().length > 0,
+            )
+          : [];
+        const seedUrls =
+          rawGalleryUrls.length > 0
+            ? rawGalleryUrls
+            : typeof profile.profilePhoto === "string" && profile.profilePhoto.trim().length > 0
+              ? [profile.profilePhoto]
+              : [];
+
+        if (seedUrls.length > 0) {
+          const existingPhotos: GalleryPhoto[] = seedUrls
+            .slice(0, MAX_GALLERY_PHOTOS)
+            .map((url: string) => ({
+              id: createGalleryId(),
+              url,
+              previewUrl: url,
+              status: "ready" as const,
+            }));
+          setGalleryPhotos(existingPhotos);
+
+          // Swap each raw S3 URL for a short-lived signed-read URL so previews actually render.
+          existingPhotos.forEach(async (photo) => {
+            try {
+              const signedReadUrl = await getSignedReadableUploadUrl(token, { url: photo.url as string });
+              setGalleryPhotos((prev) =>
+                prev.map((item) => (item.id === photo.id ? { ...item, previewUrl: signedReadUrl } : item)),
+              );
+            } catch {
+              // Keep the raw URL as a best-effort fallback.
+            }
+          });
+        } else {
+          setGalleryPhotos([]);
         }
       } else {
         setHasProfile(false);
-        setPersistedProfilePhotoUrl(undefined);
+        setGalleryPhotos([]);
         setProfileRole(data.user?.role ?? session?.user?.role ?? "");
         setDocuments([]);
         const fallbackPhone = data.user?.phone ?? session?.user?.phone ?? "";
@@ -908,7 +936,7 @@ const EditProfileClient = () => {
   const handleOpenFilePicker = () => {
     closePhotoSourceModal();
     setIsCameraModalOpen(false);
-    fileInputRef.current?.click();
+    galleryInputRef.current?.click();
   };
 
   const handleCapturePhoto = () => {
@@ -938,9 +966,8 @@ const EditProfileClient = () => {
           return;
         }
 
-        const capturedFile = new File([blob], `profile-${Date.now()}.jpg`, { type: "image/jpeg" });
-        setSelectedAvatarFile(capturedFile);
-        previewAvatarFile(capturedFile);
+        const capturedFile = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+        addFilesToGallery([capturedFile]);
         setIsCameraModalOpen(false);
       },
       "image/jpeg",
@@ -952,24 +979,7 @@ const EditProfileClient = () => {
     setCameraFacingMode((prev) => (prev === "user" ? "environment" : "user"));
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith("image/")) {
-        setSelectedAvatarFile(file);
-        previewAvatarFile(file);
-      } else {
-        showToast("Please select an image file.", "error");
-      }
-    }
-    event.target.value = "";
-  };
-
-  const uploadProfileImageToS3 = async (token: string) => {
-    if (!selectedAvatarFile) {
-      return persistedProfilePhotoUrl;
-    }
-
+  const uploadGalleryFileToS3 = async (token: string, file: File) => {
     const signResponse = await fetch(`${API_BASE_URL}/uploads/sign`, {
       method: "POST",
       headers: {
@@ -977,9 +987,9 @@ const EditProfileClient = () => {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        contentType: selectedAvatarFile.type,
+        contentType: file.type,
         kind: "profile",
-        prefix: "profiles",
+        prefix: "profile-gallery",
       }),
     });
 
@@ -990,22 +1000,13 @@ const EditProfileClient = () => {
 
     const putResponse = await fetch(signData.url, {
       method: "PUT",
-      headers: {
-        "Content-Type": selectedAvatarFile.type,
-      },
-      body: selectedAvatarFile,
+      headers: { "Content-Type": file.type },
+      body: file,
     });
 
     if (!putResponse.ok) {
       throw new Error("Failed to upload image to S3");
     }
-
-    const completeBody = {
-      documentId: signData.documentId,
-      size: selectedAvatarFile.size,
-      publicUrl: signData.publicUrl,
-      metadata: { source: "dashboard-profile-edit", kind: "profile" },
-    };
 
     const completeResponse = await fetch(`${API_BASE_URL}/uploads/complete`, {
       method: "POST",
@@ -1013,7 +1014,12 @@ const EditProfileClient = () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(completeBody),
+      body: JSON.stringify({
+        documentId: signData.documentId,
+        size: file.size,
+        publicUrl: signData.publicUrl,
+        metadata: { source: "dashboard-profile-edit", kind: "profile-gallery", fileName: file.name },
+      }),
     });
 
     const completeData = (await completeResponse.json().catch(() => ({}))) as CompleteUploadResponse & { error?: string };
@@ -1026,16 +1032,146 @@ const EditProfileClient = () => {
       throw new Error("Uploaded image URL could not be resolved");
     }
 
-    setSelectedAvatarFile(null);
-    setPersistedProfilePhotoUrl(resolvedUrl);
-    try {
-      const signedReadUrl = await getSignedReadableUploadUrl(token, { url: resolvedUrl });
-      setAvatarSrc(signedReadUrl);
-    } catch {
-      setAvatarSrc(resolvedUrl);
-    }
     return resolvedUrl;
   };
+
+  const uploadGalleryPhoto = React.useCallback(async (id: string, file: File) => {
+    const token = getAccessToken();
+    if (!token) {
+      showToast("Session expired. Please login again.", "error");
+      setGalleryPhotos((prev) => prev.map((photo) => (photo.id === id ? { ...photo, status: "error" } : photo)));
+      return;
+    }
+
+    try {
+      const resolvedUrl = await uploadGalleryFileToS3(token, file);
+      setGalleryPhotos((prev) =>
+        prev.map((photo) => (photo.id === id ? { ...photo, url: resolvedUrl, status: "ready" } : photo)),
+      );
+    } catch (error: unknown) {
+      setGalleryPhotos((prev) => prev.map((photo) => (photo.id === id ? { ...photo, status: "error" } : photo)));
+      showToast((error as Error)?.message || "Failed to upload photo.", "error");
+    }
+    // uploadGalleryFileToS3 is defined inline and stable enough; only showToast is a dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showToast]);
+
+  // Keep a File reference per in-flight/failed upload so "retry" can re-run without re-picking.
+  const galleryFilesRef = React.useRef<Map<string, File>>(new Map());
+
+  const registerGalleryObjectUrl = (url: string) => {
+    galleryObjectUrlsRef.current.add(url);
+    return url;
+  };
+
+  // "Add photo" offers the same Camera / Device choice the avatar used to — now feeding the gallery.
+  const handleGalleryChooseFiles = () => {
+    if (galleryPhotos.length >= MAX_GALLERY_PHOTOS) {
+      showToast(`You can add up to ${MAX_GALLERY_PHOTOS} photos.`, "info");
+      return;
+    }
+    openPhotoSourceModal();
+  };
+
+  const addFilesToGallery = (incoming: File[]) => {
+    if (incoming.length === 0) return;
+
+    const remainingSlots = MAX_GALLERY_PHOTOS - galleryPhotos.length;
+    if (remainingSlots <= 0) {
+      showToast(`You can add up to ${MAX_GALLERY_PHOTOS} photos.`, "info");
+      return;
+    }
+
+    const accepted: File[] = [];
+    let rejectedType = false;
+    let rejectedSize = false;
+
+    for (const file of incoming) {
+      if (!isAcceptedGalleryFile(file)) {
+        rejectedType = true;
+        continue;
+      }
+      if (file.size > MAX_GALLERY_FILE_SIZE) {
+        rejectedSize = true;
+        continue;
+      }
+      accepted.push(file);
+    }
+
+    if (rejectedType) showToast("Only image files (JPG, PNG, WEBP, GIF) are allowed.", "error");
+    if (rejectedSize) showToast("Each photo must be 5 MB or smaller.", "error");
+    if (accepted.length === 0) return;
+
+    const filesToUpload = accepted.slice(0, remainingSlots);
+    if (accepted.length > remainingSlots) {
+      showToast(`Only ${remainingSlots} more photo${remainingSlots === 1 ? "" : "s"} can be added.`, "info");
+    }
+
+    const newPhotos: GalleryPhoto[] = filesToUpload.map((file) => {
+      const id = createGalleryId();
+      galleryFilesRef.current.set(id, file);
+      return {
+        id,
+        previewUrl: registerGalleryObjectUrl(URL.createObjectURL(file)),
+        status: "uploading" as const,
+      };
+    });
+
+    setGalleryPhotos((prev) => [...prev, ...newPhotos]);
+    newPhotos.forEach((photo) => {
+      void uploadGalleryPhoto(photo.id, galleryFilesRef.current.get(photo.id) as File);
+    });
+  };
+
+  const handleGalleryFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Snapshot the files BEFORE resetting input.value — event.target.files is a live FileList,
+    // and clearing the input would empty it first, dropping the selection.
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    event.target.value = "";
+    if (files.length === 0) return;
+    addFilesToGallery(files);
+  };
+
+  const handleGalleryRemove = (id: string) => {
+    galleryFilesRef.current.delete(id);
+    setGalleryPhotos((prev) => prev.filter((photo) => photo.id !== id));
+  };
+
+  const handleGalleryRetry = (id: string) => {
+    const file = galleryFilesRef.current.get(id);
+    if (!file) {
+      handleGalleryRemove(id);
+      return;
+    }
+    setGalleryPhotos((prev) => prev.map((photo) => (photo.id === id ? { ...photo, status: "uploading" } : photo)));
+    void uploadGalleryPhoto(id, file);
+  };
+
+  const handleGalleryReorder = (fromIndex: number, toIndex: number) => {
+    setGalleryPhotos((prev) => {
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= prev.length ||
+        toIndex >= prev.length ||
+        fromIndex === toIndex
+      ) {
+        return prev;
+      }
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
+  React.useEffect(() => {
+    const objectUrls = galleryObjectUrlsRef.current;
+    return () => {
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      objectUrls.clear();
+    };
+  }, []);
 
   const uploadDocumentFileToS3 = async (token: string, file: File) => {
     const signResponse = await fetch(`${API_BASE_URL}/uploads/sign`, {
@@ -1102,10 +1238,6 @@ const EditProfileClient = () => {
       size: file.size,
       metadata,
     };
-  };
-
-  const handlePencilClick = (): void => {
-    openPhotoSourceModal();
   };
 
   const handleDocumentTypeChange = (value: string) => {
@@ -1416,7 +1548,8 @@ const EditProfileClient = () => {
       }
 
       const phoneWithCode = getPhoneWithDialCode(formData.phoneNumber);
-      const uploadedProfilePhotoUrl = await uploadProfileImageToS3(token);
+      // Unified photos: persist the ordered gallery and mirror the cover (first photo) into profilePhoto.
+      const galleryUrls = toGalleryUrls(galleryPhotos);
       const hasPasswordChange = Boolean(formData.password.trim());
 
         const payload = {
@@ -1453,7 +1586,8 @@ const EditProfileClient = () => {
         linkedinProfile: sanitizeUrlField(formData.linkedinProfile),
         keyData: serializeKeyData(formData.keyData),
         about: formData.about.trim(),
-        profilePhoto: uploadedProfilePhotoUrl || persistedProfilePhotoUrl,
+        profilePhoto: galleryUrls[0],
+        galleryPhotos: galleryUrls,
       };
 
       const endpoint = hasProfile ? "/profiles/me/update" : "/profiles/create-profile";
@@ -1528,35 +1662,8 @@ const EditProfileClient = () => {
     setIsSubmitting(false);
   };
 
-  const isExternalAvatar = /^(https?:)?\/\//.test(avatarSrc) || avatarSrc.startsWith("blob:") || avatarSrc.startsWith("data:");
-
   return (
     <AboutEditProfileClientStyled>
-      <Box className="avatar_wrap_main_cont">
-        <Box className="avatar_wrap">
-          <Box className="avatar_fig">
-            <Image
-              src={avatarSrc}
-              alt="user image"
-              width={108}
-              height={108}
-              unoptimized={isExternalAvatar}
-              style={{ borderRadius: "50%", objectFit: "cover" }}
-            />
-          </Box>
-          <IconButton className="pencil_cont" onClick={handlePencilClick}>
-            <Image src="/assets/icons/pencil-icon-editsvg.svg" alt="edit image" width={24} height={24} />
-          </IconButton>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            accept="image/*"
-            style={{ display: "none" }}
-          />
-        </Box>
-      </Box>
       <Dialog
         open={isPhotoSourceModalOpen}
         onClose={closePhotoSourceModal}
@@ -1571,7 +1678,7 @@ const EditProfileClient = () => {
       >
         <DialogContent sx={{ p: 0 }}>
           <Typography sx={{ fontSize: "18px", fontWeight: 600, color: "#31445A", textAlign: "center", mb: 2 }}>
-            Update profile picture
+            Add a photo
           </Typography>
           <Stack spacing={1.5}>
             <CustomButtonRounded fullWidth variant="contained" color="primary" onClick={handleOpenCamera} startIcon={<CameraAltRoundedIcon />}>
@@ -1754,6 +1861,17 @@ const EditProfileClient = () => {
       <Box className="form_wrap">
         <form onSubmit={handleSubmit} autoComplete="off">
           <Grid container spacing={2}>
+            <Grid size={{ xs: 12 }}>
+              <ProfileGallerySection
+                photos={galleryPhotos}
+                fileInputRef={galleryInputRef}
+                onChooseFiles={handleGalleryChooseFiles}
+                onFilesSelected={handleGalleryFilesSelected}
+                onRemove={handleGalleryRemove}
+                onRetry={handleGalleryRetry}
+                onReorder={handleGalleryReorder}
+              />
+            </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <CustomInputProfile
                 label="Full Name"

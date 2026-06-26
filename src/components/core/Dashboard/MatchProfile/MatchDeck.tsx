@@ -10,6 +10,7 @@ import Image from "next/image"
 import React from "react"
 import { formatMatchProfileTitle, type MatchProfileCard } from "@/lib/matchmaking-presenters"
 import MatchScoreGauge from "./MatchScoreGauge"
+import MatchCardPhotos from "./MatchCardPhotos"
 import { ACTION_META, ANIMATION_DURATION, isRemoteImageUrl } from "./matchProfileUtils"
 import type { SwipeDecision } from "./matchProfileTypes"
 
@@ -25,6 +26,7 @@ type MatchDeckProps = {
   nextCardScale: number
   remainingCount: number
   getCardImage: (profile: MatchProfileCard) => string
+  getCardImages: (profile: MatchProfileCard) => string[]
   onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void
   onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void
   onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void
@@ -74,6 +76,7 @@ const MatchDeck = React.memo(function MatchDeck({
   nextCardScale,
   remainingCount,
   getCardImage,
+  getCardImages,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -104,8 +107,6 @@ const MatchDeck = React.memo(function MatchDeck({
     )
   }
 
-  const cardImage = getCardImage(currentProfile)
-
   return (
     <Box className="deckStage">
       {nextProfile && (
@@ -126,16 +127,12 @@ const MatchDeck = React.memo(function MatchDeck({
             : `transform ${ANIMATION_DURATION}ms ease, opacity ${ANIMATION_DURATION}ms ease, box-shadow 0.25s ease`,
         }}
       >
-        <Box className="cardImage">
-          <Image
-            src={cardImage}
-            alt={`${currentProfile.name} profile`}
-            fill
-            priority
-            sizes="(max-width: 1099px) 100vw, 50vw"
-            unoptimized={isRemoteImageUrl(cardImage)}
-          />
-        </Box>
+        <MatchCardPhotos
+          key={currentProfile.id}
+          images={getCardImages(currentProfile)}
+          alt={`${currentProfile.name} profile`}
+          priority
+        />
         <Box className="cardTopScrim" />
 
         <Stack className="cardTopMeta" direction="row" justifyContent="space-between" alignItems="flex-start">

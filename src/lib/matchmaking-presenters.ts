@@ -8,6 +8,8 @@ export type MatchProfileCard = {
   name: string
   age: number | null
   image: string
+  /** Ordered photo gallery (cover first). Always has at least one entry. */
+  images: string[]
   fallbackImage: string
   verified: boolean
   profileType: "Investor" | "Company" | "Broker"
@@ -135,6 +137,19 @@ function buildCapitalLabel(suggestion: MatchSuggestion) {
 export function mapSuggestionToCard(suggestion: MatchSuggestion): MatchProfileCard {
   const profileType = mapRoleType(suggestion.profile.roleType)
   const defaultImage = DEFAULT_ROLE_IMAGE[profileType]
+
+  // Build the ordered photo set: gallery first, else the legacy single photo, else a role default.
+  const gallery = Array.isArray(suggestion.profile.galleryPhotos)
+    ? suggestion.profile.galleryPhotos.filter(
+        (url): url is string => typeof url === "string" && url.trim().length > 0,
+      )
+    : []
+  const images =
+    gallery.length > 0
+      ? gallery
+      : suggestion.profile.profilePhoto
+        ? [suggestion.profile.profilePhoto]
+        : [defaultImage]
   const userTypeLabel = suggestion.profile.userTypeLabel || profileType
   const profileSubtypeLabel =
     suggestion.profile.profileTypeLabel ||
@@ -210,7 +225,8 @@ export function mapSuggestionToCard(suggestion: MatchSuggestion): MatchProfileCa
     roleType: suggestion.profile.roleType,
     name: suggestion.profile.displayName,
     age: null,
-    image: suggestion.profile.profilePhoto || defaultImage,
+    image: images[0],
+    images,
     fallbackImage: defaultImage,
     verified: suggestion.profile.isVerified,
     profileType,

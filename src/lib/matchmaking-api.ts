@@ -107,6 +107,7 @@ export type MatchSuggestionProfile = {
     userTypeLabel: string
     profileTypeLabel: string
     profilePhoto: string | null
+    galleryPhotos?: string[] | null
     bio: string | null
     about: string | null
     keyData: string | null
