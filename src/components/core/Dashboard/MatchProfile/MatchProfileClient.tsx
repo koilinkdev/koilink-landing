@@ -13,6 +13,8 @@ import {
   type MatchPreferences,
 } from "@/lib/matchmaking-api"
 import { mapSuggestionToCard, type MatchProfileCard } from "@/lib/matchmaking-presenters"
+import { getSignedReadableUploadUrl } from "@/lib/chat-api"
+import type { ProfileDocument } from "@/lib/profileDocuments"
 import { MatchProfileClientStyled } from "@/styledComponents/MatchProfile/MatchProfileClientStyled"
 import MatchActionStrip from "./MatchActionStrip"
 import MatchDeck from "./MatchDeck"
@@ -33,6 +35,7 @@ import {
   isTypingTarget,
 } from "./matchProfileUtils"
 import { useResolvedMatchImages } from "./useResolvedMatchImages"
+import { useMatchProfileDocuments } from "./useMatchProfileDocuments"
 
 const countActiveFilters = (preferences: MatchPreferences) => {
   let count = 0
@@ -77,6 +80,8 @@ const MatchProfileClient = () => {
   const pointerIdRef = React.useRef<number | null>(null)
   const animationTimerRef = React.useRef<number | null>(null)
   const { getCardImage, getCardImages } = useResolvedMatchImages(profiles, activeIndex)
+  const getProfileDocuments = useMatchProfileDocuments(profiles, activeIndex)
+  const [openingDocumentId, setOpeningDocumentId] = React.useState<string | null>(null)
 
   const currentProfile = profiles[activeIndex] ?? null
   const nextProfiles = React.useMemo(
@@ -431,6 +436,25 @@ const MatchProfileClient = () => {
     setDraftPrefs(savedPrefs)
   }, [savedPrefs])
 
+  const handleOpenDocument = React.useCallback(async (document: ProfileDocument) => {
+    if (!document.url && !document.key) {
+      setFeedbackMessage("This document is missing its file link.")
+      return
+    }
+
+    setOpeningDocumentId(document.documentId)
+    try {
+      const signedUrl = await getSignedReadableUploadUrl(
+        document.url ? { url: document.url } : { key: document.key },
+      )
+      window.open(signedUrl, "_blank", "noopener,noreferrer")
+    } catch {
+      setFeedbackMessage("Could not open the document. Please try again.")
+    } finally {
+      setOpeningDocumentId(null)
+    }
+  }, [])
+
   const openMatchedConversation = React.useCallback(() => {
     if (matchedConversation?.conversationId) {
       router.push(`/dashboard/chat?conversationId=${matchedConversation.conversationId}`)
@@ -500,6 +524,9 @@ const MatchProfileClient = () => {
             connectedCount={connectedIds.length}
             savedCount={savedIds.length}
             passedCount={passedIds.length}
+            documents={getProfileDocuments(currentProfile?.userId)}
+            openingDocumentId={openingDocumentId}
+            onOpenDocument={handleOpenDocument}
           />
         </Box>
       </Box>

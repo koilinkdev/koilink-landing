@@ -36,8 +36,10 @@ const ProfileDocumentsDisplay = ({
   return (
     <Stack spacing={1}>
       {documents.map((document) => {
+        const documentName = getProfileDocumentName(document);
+        const typeLabel = getDocumentTypeLabel(document.type);
         const metaLine = [
-          getDocumentTypeLabel(document.type),
+          typeLabel && typeLabel !== documentName ? typeLabel : "",
           formatDocumentSize(document.size),
         ].filter(Boolean).join(" • ");
 
@@ -78,7 +80,7 @@ const ProfileDocumentsDisplay = ({
                       wordBreak: "break-word",
                     }}
                   >
-                    {getProfileDocumentName(document)}
+                    {documentName}
                   </Typography>
                   {metaLine && (
                     <Typography sx={{ mt: 0.25, fontSize: "12px", color: common.color6D9DC5 }}>
@@ -92,7 +94,7 @@ const ProfileDocumentsDisplay = ({
                 <IconButton
                   onClick={() => onOpen(document)}
                   disabled={openingDocumentId === document.documentId}
-                  aria-label={`Open ${getProfileDocumentName(document)}`}
+                  aria-label={`Open ${documentName}`}
                   sx={{ color: primary.main, flexShrink: 0 }}
                 >
                   <OpenInNewRoundedIcon fontSize="small" />

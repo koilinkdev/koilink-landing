@@ -933,38 +933,52 @@ export const MatchProfileClientStyled = styled(Box)`
     padding: 18px 22px 22px;
   }
 
-  .tabSection {
-    & + & {
-      margin-top: 20px;
-    }
+  .tabSection:first-of-type .tabSectionTitle {
+    margin-top: 0;
   }
   .tabSectionTitle {
-    margin-bottom: 10px;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 28px;
+    margin-bottom: 11px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
+
+    &::before {
+      content: "";
+      width: 3px;
+      height: 13px;
+      flex: none;
+      border-radius: 999px;
+      background: linear-gradient(180deg, ${primary.main}, ${secondary.main});
+    }
   }
 
   .factGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background-color: var(--line);
+    gap: 10px;
     @media (max-width: 420px) {
       grid-template-columns: 1fr;
     }
   }
   .factCell {
     padding: 13px 15px;
-    background-color: ${common.white};
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: linear-gradient(160deg, ${common.white}, var(--paper));
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    &:hover {
+      border-color: var(--line-strong);
+      box-shadow: 0 8px 18px rgba(13, 28, 46, 0.05);
+    }
     small {
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
       font-size: 10.5px;
       font-weight: 700;
       letter-spacing: 0.06em;
@@ -991,25 +1005,29 @@ export const MatchProfileClientStyled = styled(Box)`
     color: var(--muted);
   }
 
+  .reasonList {
+    padding: 15px 16px;
+    border: 1px solid rgba(16, 157, 164, 0.16);
+    border-radius: var(--radius-md);
+    background: linear-gradient(150deg, rgba(127, 222, 216, 0.1), rgba(48, 102, 190, 0.04));
+  }
   .reasonRow {
     display: flex;
     align-items: flex-start;
-    gap: 11px;
+    gap: 10px;
     & + & {
-      margin-top: 11px;
+      margin-top: 12px;
     }
   }
-  .reasonDot {
-    width: 7px;
-    height: 7px;
-    margin-top: 7px;
+  .reasonIcon {
+    margin-top: 1px;
     flex: none;
-    border-radius: 50%;
-    background: linear-gradient(135deg, ${primary.main}, ${secondary.main});
+    font-size: 18px;
+    color: ${primary.main};
   }
   .reasonText {
     font-size: 13.5px;
-    line-height: 1.55;
+    line-height: 1.5;
     color: ${common.color31445A};
   }
 

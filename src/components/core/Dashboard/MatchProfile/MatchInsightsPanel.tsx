@@ -2,6 +2,7 @@
 
 import {
   ArticleOutlined,
+  CheckCircleRounded,
   DataObjectRounded,
   PlaceOutlined,
   VerifiedRounded,
@@ -9,7 +10,9 @@ import {
 import { Box, Typography } from "@mui/material"
 import React from "react"
 import KeyDataDisplay from "@/components/ui/Dashboard/KeyDataDisplay"
+import ProfileDocumentsDisplay from "@/components/ui/Dashboard/ProfileDocumentsDisplay"
 import type { MatchProfileCard } from "@/lib/matchmaking-presenters"
+import type { ProfileDocument } from "@/lib/profileDocuments"
 import MatchLocationMap from "./MatchLocationMap"
 import MatchScoreGauge from "./MatchScoreGauge"
 import type { SwipeDecision } from "./matchProfileTypes"
@@ -20,6 +23,9 @@ type MatchInsightsPanelProps = {
   connectedCount: number
   savedCount: number
   passedCount: number
+  documents?: ProfileDocument[]
+  openingDocumentId?: string | null
+  onOpenDocument?: (document: ProfileDocument) => void
 }
 
 type TabKey = "overview" | "location" | "data"
@@ -66,14 +72,20 @@ const OverviewTab = ({ profile }: { profile: MatchProfileCard }) => (
     </TabSection>
 
     <TabSection title="Why this profile can work">
-      <Box>
-        {profile.reasons.map((reason) => (
-          <Box key={reason} className="reasonRow">
-            <span className="reasonDot" />
-            <Typography className="reasonText">{reason}</Typography>
-          </Box>
-        ))}
-      </Box>
+      {profile.reasons.length > 0 ? (
+        <Box className="reasonList">
+          {profile.reasons.map((reason) => (
+            <Box key={reason} className="reasonRow">
+              <CheckCircleRounded className="reasonIcon" />
+              <Typography className="reasonText">{reason}</Typography>
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <Typography className="mutedText">
+          No compatibility highlights yet — review the profile to decide.
+        </Typography>
+      )}
     </TabSection>
   </>
 )
@@ -84,6 +96,9 @@ const MatchInsightsPanel = React.memo(function MatchInsightsPanel({
   connectedCount,
   savedCount,
   passedCount,
+  documents,
+  openingDocumentId,
+  onOpenDocument,
 }: MatchInsightsPanelProps) {
   const [tab, setTab] = React.useState<TabKey>("overview")
 
@@ -156,7 +171,23 @@ const MatchInsightsPanel = React.memo(function MatchInsightsPanel({
       </Box>
 
       <Box className="dossierBody">
-        {tab === "overview" && <OverviewTab profile={currentProfile} />}
+        {tab === "overview" && (
+          <>
+            <OverviewTab profile={currentProfile} />
+            <TabSection title="Documents">
+              <ProfileDocumentsDisplay
+                documents={documents ?? []}
+                openingDocumentId={openingDocumentId}
+                onOpen={onOpenDocument}
+                emptyMessage={
+                  documents === undefined
+                    ? "Loading documents…"
+                    : "This profile has not shared any documents yet."
+                }
+              />
+            </TabSection>
+          </>
+        )}
 
         {tab === "location" && (
           <TabSection title="Where they are based">

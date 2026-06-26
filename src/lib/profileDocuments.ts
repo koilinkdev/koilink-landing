@@ -97,15 +97,27 @@ export const formatDocumentSize = (size?: number) => {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+// Matches our generated S3 object names, e.g. "1778052781918-GWL8kQ.png"
+// (`<timestamp>-<nanoid>[.ext]`). These are not human-readable, so we never
+// surface them as a document title.
+const GENERATED_KEY_NAME = /^\d{10,}-[A-Za-z0-9_-]{4,}(\.[A-Za-z0-9]+)?$/;
+
 export const getProfileDocumentName = (document: ProfileDocument) => {
-  const metadataName = typeof document.metadata?.fileName === "string" ? document.metadata.fileName : undefined;
+  const metadataName = typeof document.metadata?.fileName === "string" ? document.metadata.fileName.trim() : "";
   if (metadataName) {
     return metadataName;
   }
 
-  const source = document.url || document.key || document.documentId;
-  const lastSegment = source.split("/").filter(Boolean).pop();
-  return lastSegment || "Untitled document";
+  const source = document.url || document.key || "";
+  const lastSegment = (source.split("/").filter(Boolean).pop() || "").trim();
+
+  // Fall back to the human document-type label (e.g. "Professional References")
+  // instead of the raw S3 key when there's no original filename to show.
+  if (!lastSegment || GENERATED_KEY_NAME.test(lastSegment)) {
+    return getDocumentTypeLabel(document.type) || "Document";
+  }
+
+  return lastSegment;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
