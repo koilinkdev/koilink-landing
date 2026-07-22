@@ -92,11 +92,15 @@ export const NotificationTimelineStyled = styled(Box)`
 
 type NotificationTimelineProps = {
   notifications?: NotificationRecord[];
+  onMarkAllRead?: () => void;
 };
 
 export default function NotificationTimeline({
   notifications = [],
+  onMarkAllRead,
 }: NotificationTimelineProps) {
+  const hasUnread = notifications.some((notification) => !notification.isRead);
+
   return (
     <NotificationTimelineStyled>
       <Stack
@@ -108,13 +112,32 @@ export default function NotificationTimeline({
         <Typography variant="h6" className="notification_text">
           Notifications
         </Typography>
-        <Button variant="contained"
-          color="primary"
-          component={Link}
-          href="/dashboard/notification"
-          className="notification_btn">
-          All
-        </Button>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {onMarkAllRead && hasUnread ? (
+            <Button
+              variant="text"
+              color="primary"
+              onClick={onMarkAllRead}
+              sx={{
+                minWidth: "auto",
+                p: "2px 6px",
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: "none",
+                lineHeight: 1.1,
+              }}
+            >
+              Mark all read
+            </Button>
+          ) : null}
+          <Button variant="contained"
+            color="primary"
+            component={Link}
+            href="/dashboard/notification"
+            className="notification_btn">
+            All
+          </Button>
+        </Stack>
       </Stack>
 
       <List sx={{ p: 0 }} className="main_panel">

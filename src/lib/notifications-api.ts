@@ -185,6 +185,7 @@ export function notificationToActivity(notification: NotificationRecord): Notifi
       "viewerName",
       "organizerName",
       "otherPartyName",
+      "expiredUserName",
     ]),
     actorPhoto: readPayloadString(notification.payload, [
       "senderPhoto",
@@ -193,6 +194,7 @@ export function notificationToActivity(notification: NotificationRecord): Notifi
       "viewerPhoto",
       "organizerPhoto",
       "otherPartyPhoto",
+      "expiredUserPhoto",
     ]),
     actionUrl: notification.actionUrl,
     createdAt: notification.createdAt,

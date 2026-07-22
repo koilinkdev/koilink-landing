@@ -10,6 +10,7 @@ import {
   type NotificationRecord,
 } from "@/lib/notifications-api"
 import { formatNotificationTime } from "@/lib/notification-display"
+import { useNotificationCenter } from "@/components/core/Dashboard/Notification/NotificationCenterProvider"
 
 const AboutNotificationDetailStyled = styled(Box)`
   padding: 20px;
@@ -82,6 +83,13 @@ const NotificationDetail = () => {
   const params = useParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
   const [notification, setNotification] = React.useState<NotificationRecord | null>(null)
+  const notificationCenter = useNotificationCenter()
+
+  // Read through a ref so marking-as-read does not re-run the load effect.
+  const registerReadRef = React.useRef(notificationCenter?.registerRead)
+  React.useEffect(() => {
+    registerReadRef.current = notificationCenter?.registerRead
+  }, [notificationCenter?.registerRead])
 
   React.useEffect(() => {
     if (!slug) {
@@ -99,7 +107,10 @@ const NotificationDetail = () => {
         }
 
         if (!data.isRead) {
-          void markNotificationAsReadApi(data.id)
+          void markNotificationAsReadApi(data.id).then(
+            () => registerReadRef.current?.(1),
+            () => undefined,
+          )
         }
       } catch {
         if (!cancelled) {

@@ -2,6 +2,7 @@ import { ThemeRegistry } from "@/theme/ThemeRegistry";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v13-appRouter";
 import AuthGuard from "@/components/core/Auth/AuthGuard";
 import { CallProvider } from "@/components/core/Dashboard/Call/CallProvider";
+import { NotificationCenterProvider } from "@/components/core/Dashboard/Notification/NotificationCenterProvider";
 
 export default function DashboardLayout({
   children,
@@ -14,7 +15,9 @@ export default function DashboardLayout({
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
           <ThemeRegistry>
             <AuthGuard>
-              <CallProvider>{children}</CallProvider>
+              <CallProvider>
+                <NotificationCenterProvider>{children}</NotificationCenterProvider>
+              </CallProvider>
             </AuthGuard>
           </ThemeRegistry>
         </AppRouterCacheProvider>

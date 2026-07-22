@@ -26,6 +26,7 @@ import {
   getActivityFallbackImage,
   isDirectAssetUrl,
 } from "@/lib/notification-display";
+import { useNotificationCenter } from "@/components/core/Dashboard/Notification/NotificationCenterProvider";
 
 interface NotificationDrawerProps {
   open: boolean;
@@ -69,6 +70,7 @@ const addUniqueMatch = (items: MatchSummary[], nextMatch: MatchSummary) => {
 const NotificationDrawer = ({ open, onClose }: NotificationDrawerProps) => {
   const session = getAuthSession();
   const token = session?.tokens.access || null;
+  const notificationCenter = useNotificationCenter();
 
   const [notifications, setNotifications] = React.useState<NotificationRecord[]>([]);
   const [activities, setActivities] = React.useState<NotificationActivity[]>([]);
@@ -233,9 +235,27 @@ const NotificationDrawer = ({ open, onClose }: NotificationDrawerProps) => {
     [getResolvedImage, matches],
   );
 
+  const handleMarkAllRead = React.useCallback(async () => {
+    if (!notificationCenter) {
+      return;
+    }
+
+    await notificationCenter.markAllRead();
+    setNotifications((previous) =>
+      previous.map((notification) => ({
+        ...notification,
+        isRead: true,
+        readAt: notification.readAt || new Date().toISOString(),
+      })),
+    );
+  }, [notificationCenter]);
+
   return (
     <NotificationDrawerStyled anchor="right" open={open} onClose={onClose}>
-      <NotificationTimeline notifications={notifications} />
+      <NotificationTimeline
+        notifications={notifications}
+        onMarkAllRead={notificationCenter ? () => void handleMarkAllRead() : undefined}
+      />
       <ActivitiesTimeline activities={activityItems} />
       <MatchesTimeline matches={matchItems}/>
     </NotificationDrawerStyled>

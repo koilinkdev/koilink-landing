@@ -114,14 +114,19 @@ export function getDrawerNotificationIcon(type?: NotificationType) {
 export function getNotificationPageIcon(type?: NotificationType) {
   switch (type) {
     case "message":
+    case "document_shared":
       return "/assets/icons/notification-icon-notificationPage.svg"
     case "subscription_expiry":
     case "system":
+    case "match_expired":
       return "/assets/icons/redBell-notification.svg"
     case "connection":
     case "connection_request":
     case "match":
+    case "like":
+    case "super_like":
     case "profile_view":
+    case "verification_complete":
       return "/assets/icons/box-icon-notification.svg"
     default:
       return "/assets/icons/yellowBox-notification.svg"
@@ -129,11 +134,11 @@ export function getNotificationPageIcon(type?: NotificationType) {
 }
 
 export function getNotificationPageIconColor(type?: NotificationType, index = 0) {
-  if (type === "subscription_expiry" || type === "system") {
+  if (type === "subscription_expiry" || type === "system" || type === "match_expired") {
     return "#FFEFF1"
   }
 
-  if (type === "message") {
+  if (type === "message" || type === "document_shared") {
     return "#EEF3F1"
   }
 

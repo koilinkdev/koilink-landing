@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import { DashboardheaderStyled } from "@/styledComponents/Dashboard/DashboardheaderStyled";
-import { Stack, Box, IconButton, Typography, } from "@mui/material";
+import { Stack, Box, IconButton, Typography, Badge } from "@mui/material";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import CustomSearchAutocomplete from "@/components/ui/Dashboard/CustomSearchAutocomplete";
 import NotificationDrawer from "@/components/core/Dashboard/NotificationDrawer";
+import { useNotificationCenter } from "@/components/core/Dashboard/Notification/NotificationCenterProvider";
 
 interface DashboardHeaderProps {
   toggleDrawer: () => void;
@@ -13,6 +14,8 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ toggleDrawer }: DashboardHeaderProps) => {
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const notificationCenter = useNotificationCenter();
+  const unreadCount = notificationCenter?.unreadCount || 0;
   const toggleNotificationDrawer = () => setNotificationOpen((prev) => !prev);
   const closeNotificationDrawer = () => setNotificationOpen(false);
   // atocomplete options
@@ -147,13 +150,33 @@ const DashboardHeader = ({ toggleDrawer }: DashboardHeaderProps) => {
                 />
               </IconButton>
               <IconButton className="icon_btn" color="primary"
+                aria-label={
+                  unreadCount > 0
+                    ? `Notifications, ${unreadCount} unread`
+                    : "Notifications"
+                }
                 onClick={toggleNotificationDrawer}>
-                <Image
-                  src="/assets/icons/notification-icon.svg"
-                  width={20}
-                  height={20}
-                  alt="notification icon"
-                />
+                <Badge
+                  badgeContent={unreadCount}
+                  max={99}
+                  color="error"
+                  overlap="circular"
+                  sx={{
+                    "& .MuiBadge-badge": {
+                      fontSize: 9,
+                      height: 15,
+                      minWidth: 15,
+                      padding: "0 4px",
+                    },
+                  }}
+                >
+                  <Image
+                    src="/assets/icons/notification-icon.svg"
+                    width={20}
+                    height={20}
+                    alt="notification icon"
+                  />
+                </Badge>
               </IconButton>
             </Stack>
           </Box>
