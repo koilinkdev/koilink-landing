@@ -167,6 +167,14 @@ function readPayloadString(payload: Record<string, unknown>, keys: string[]) {
   return null
 }
 
+/**
+ * Right-swipe notifications withhold the swiper on free tiers, so the payload
+ * carries `revealed: false` and no actor fields at all.
+ */
+export function isActorHidden(payload: Record<string, unknown>) {
+  return payload.revealed === false
+}
+
 export function notificationToActivity(notification: NotificationRecord): NotificationActivity {
   const text =
     notification.type === "message"
@@ -178,15 +186,17 @@ export function notificationToActivity(notification: NotificationRecord): Notifi
     notificationId: notification.id,
     type: notification.type,
     text,
-    actorName: readPayloadString(notification.payload, [
-      "senderName",
-      "connectedUserName",
-      "requesterName",
-      "viewerName",
-      "organizerName",
-      "otherPartyName",
-      "expiredUserName",
-    ]),
+    actorName: isActorHidden(notification.payload)
+      ? "Someone"
+      : readPayloadString(notification.payload, [
+          "senderName",
+          "connectedUserName",
+          "requesterName",
+          "viewerName",
+          "organizerName",
+          "otherPartyName",
+          "expiredUserName",
+        ]),
     actorPhoto: readPayloadString(notification.payload, [
       "senderPhoto",
       "connectedUserPhoto",

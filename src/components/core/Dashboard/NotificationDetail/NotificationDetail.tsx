@@ -6,6 +6,7 @@ import { Typography, Box, styled } from "@mui/material"
 import { useParams } from "next/navigation"
 import {
   getNotificationApi,
+  isActorHidden,
   markNotificationAsReadApi,
   type NotificationRecord,
 } from "@/lib/notifications-api"
@@ -64,6 +65,10 @@ const readPayloadString = (
 }
 
 const getNotificationSender = (notification: NotificationRecord) => {
+  if (isActorHidden(notification.payload)) {
+    return "Someone"
+  }
+
   return (
     readPayloadString(notification.payload, [
       "senderName",
