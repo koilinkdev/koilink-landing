@@ -44,6 +44,8 @@ export type ComparablePlan = {
   _id: string
   name: string
   displayName: string
+  /** Needed to open a checkout session for the plan. */
+  stripePriceId?: string
   tier: "free" | "basic" | "premium" | "enterprise"
   price: number
   currency: string

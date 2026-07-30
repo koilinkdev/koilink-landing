@@ -20,6 +20,7 @@ import {
 } from "@/lib/notification-display"
 
 const TOAST_DURATION_MS = 5000
+const PRIORITY_TOAST_DURATION_MS = 8000
 
 // Guards against the same notification being counted twice if the server ever
 // re-emits, and caps memory on a long-lived session.
@@ -180,7 +181,10 @@ export function NotificationCenterProvider({ children }: { children: React.React
             p: 1.5,
             borderRadius: "12px",
             backgroundColor: "#FFFFFF",
-            border: "1px solid rgba(109, 157, 197, 0.25)",
+            border:
+              activeToast?.type === "super_like"
+                ? "1px solid #1E88E5"
+                : "1px solid rgba(109, 157, 197, 0.25)",
             boxShadow: "0 12px 32px rgba(13, 28, 46, 0.16)",
           }}
         >
