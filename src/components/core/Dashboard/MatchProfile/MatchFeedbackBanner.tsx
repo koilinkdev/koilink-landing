@@ -9,6 +9,16 @@ type MatchFeedbackBannerProps = {
   matchedConversation: MatchedConversation
   swipeLimitState: SwipeLimitState | null
   onOpenConversation: () => void
+  onUpgrade: () => void
+}
+
+const formatResetTime = (resetsAt: string | null) => {
+  if (!resetsAt) return null
+
+  const reset = new Date(resetsAt)
+  if (Number.isNaN(reset.getTime())) return null
+
+  return reset.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
 }
 
 const MatchFeedbackBanner = React.memo(function MatchFeedbackBanner({
@@ -16,10 +26,31 @@ const MatchFeedbackBanner = React.memo(function MatchFeedbackBanner({
   matchedConversation,
   swipeLimitState,
   onOpenConversation,
+  onUpgrade,
 }: MatchFeedbackBannerProps) {
   if (!feedbackMessage && !matchedConversation && !swipeLimitState) {
     return null
   }
+
+  const isSuperQuota = swipeLimitState?.quotaType === "superLikes"
+  const resetTime = formatResetTime(swipeLimitState?.resetsAt ?? null)
+
+  const meta = (() => {
+    if (!swipeLimitState) return null
+
+    if (isSuperQuota) {
+      if (swipeLimitState.upgradeRequired) {
+        return "Super Swipes are not included in your current plan."
+      }
+      return resetTime
+        ? `Your Super Swipes reset at ${resetTime}. Ordinary swiping is unaffected.`
+        : "Your Super Swipes reset at midnight. Ordinary swiping is unaffected."
+    }
+
+    return swipeLimitState.current !== null && swipeLimitState.dailyLimit !== null
+      ? `You have used ${swipeLimitState.current} of ${swipeLimitState.dailyLimit} daily swipes.`
+      : "Swipe actions are paused until your daily limit resets."
+  })()
 
   return (
     <Stack
@@ -33,17 +64,17 @@ const MatchFeedbackBanner = React.memo(function MatchFeedbackBanner({
         <Typography className="feedbackBannerText">
           {feedbackMessage || "Conversation unlocked."}
         </Typography>
-        {swipeLimitState && (
-          <Typography className="feedbackBannerMeta">
-            {swipeLimitState.current !== null && swipeLimitState.dailyLimit !== null
-              ? `You have used ${swipeLimitState.current} of ${swipeLimitState.dailyLimit} daily swipes.`
-              : "Swipe actions are paused until your daily limit resets."}
-          </Typography>
-        )}
+        {meta && <Typography className="feedbackBannerMeta">{meta}</Typography>}
       </Stack>
       {matchedConversation && !swipeLimitState && (
         <Button className="feedbackBannerAction" onClick={onOpenConversation}>
           Open chat with {matchedConversation.displayName}
+        </Button>
+      )}
+      {/* The limit branch previously rendered no call to action at all. */}
+      {swipeLimitState?.upgradeRequired && (
+        <Button className="feedbackBannerAction" onClick={onUpgrade}>
+          See plans
         </Button>
       )}
     </Stack>

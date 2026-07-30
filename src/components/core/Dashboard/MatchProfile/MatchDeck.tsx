@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  BoltRounded,
   LocationOnOutlined,
   ReplayRounded,
   VerifiedRounded,
@@ -43,7 +44,10 @@ const BackCard = ({
   image: string
   scale: number
 }) => (
-  <Box className="deckBackCard" sx={{ transform: `translateY(16px) scale(${scale})` }}>
+  <Box
+    className={`deckBackCard${profile.superLikedYou ? " isSuperLiked" : ""}`}
+    sx={{ transform: `translateY(16px) scale(${scale})` }}
+  >
     <Box className="backCardImage">
       <Image
         src={image}
@@ -114,7 +118,7 @@ const MatchDeck = React.memo(function MatchDeck({
       )}
 
       <Box
-        className={`matchDeckCard ${canInteract ? "" : "isDisabled"}`}
+        className={`matchDeckCard ${canInteract ? "" : "isDisabled"}${currentProfile.superLikedYou ? " isSuperLiked" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -139,12 +143,22 @@ const MatchDeck = React.memo(function MatchDeck({
           <Box className="glassPill muted">
             <span>{currentProfile.userTypeLabel}</span>
           </Box>
-          {currentProfile.verified && (
-            <Box className="verifiedBadge">
-              <VerifiedRounded sx={{ fontSize: 15 }} />
-              Verified
-            </Box>
-          )}
+          <Stack direction="row" spacing={1} alignItems="center">
+            {/* Someone spent a Super Swipe to reach the viewer, so it is called out
+                even for free accounts - that disclosure is what they paid for. */}
+            {currentProfile.superLikedYou && (
+              <Box className="superLikeBadge">
+                <BoltRounded />
+                Super Swiped you
+              </Box>
+            )}
+            {currentProfile.verified && (
+              <Box className="verifiedBadge">
+                <VerifiedRounded sx={{ fontSize: 15 }} />
+                Verified
+              </Box>
+            )}
+          </Stack>
         </Stack>
 
         <Box className={`decisionHalo ${visibleDecision ? "isVisible" : ""} ${visibleDecision ?? ""}`}>

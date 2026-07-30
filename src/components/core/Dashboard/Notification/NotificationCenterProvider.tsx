@@ -63,13 +63,18 @@ export function NotificationCenterProvider({ children }: { children: React.React
   }, [refreshUnreadCount])
 
   // Show one toast at a time; promote the head of the queue when the slot frees.
+  // High-priority items (Super Swipes, new connections) jump the queue so they are
+  // not buried behind a backlog of low-value notices.
   React.useEffect(() => {
     if (activeToast || queue.length === 0) {
       return
     }
 
-    setActiveToast(queue[0])
-    setQueue((previous) => previous.slice(1))
+    const priorityIndex = queue.findIndex((item) => item.priority === "high")
+    const nextIndex = priorityIndex === -1 ? 0 : priorityIndex
+
+    setActiveToast(queue[nextIndex])
+    setQueue((previous) => previous.filter((_item, index) => index !== nextIndex))
   }, [activeToast, queue])
 
   React.useEffect(() => {
@@ -150,7 +155,11 @@ export function NotificationCenterProvider({ children }: { children: React.React
 
       <Snackbar
         open={Boolean(activeToast)}
-        autoHideDuration={TOAST_DURATION_MS}
+        // High-priority notifications earn a longer read; they usually carry an
+        // action the user is expected to take.
+        autoHideDuration={
+          activeToast?.priority === "high" ? PRIORITY_TOAST_DURATION_MS : TOAST_DURATION_MS
+        }
         onClose={(_event, reason) => {
           if (reason === "clickaway") {
             return
