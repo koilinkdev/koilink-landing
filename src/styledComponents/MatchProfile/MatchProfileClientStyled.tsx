@@ -306,6 +306,29 @@ export const MatchProfileClientStyled = styled(Box)`
     }
   }
 
+  /* The ring marks someone who Super Swiped the viewer. Applied to the back card
+     too, so the signal is visible one card ahead. */
+  .matchDeckCard.isSuperLiked,
+  .deckBackCard.isSuperLiked {
+    box-shadow: 0 0 0 3px ${SUPER_SWIPE_BLUE}, var(--shadow-card);
+  }
+  .superLikeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: ${SUPER_SWIPE_BLUE};
+    color: ${common.white};
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    svg {
+      font-size: 14px;
+    }
+  }
+
   /* Light top gradient keeps top pills legible without hiding the face */
   .cardTopScrim {
     position: absolute;
@@ -455,6 +478,11 @@ export const MatchProfileClientStyled = styled(Box)`
     &.save {
       background: radial-gradient(circle, rgba(48, 102, 190, 0.52), rgba(48, 102, 190, 0.18));
       box-shadow: 0 0 70px rgba(48, 102, 190, 0.3);
+    }
+    /* Brighter and larger than .save so the two upward exits read differently. */
+    &.super {
+      background: radial-gradient(circle, rgba(30, 136, 229, 0.68), rgba(30, 136, 229, 0.22));
+      box-shadow: 0 0 90px rgba(30, 136, 229, 0.55);
     }
   }
   .decisionLabel {
