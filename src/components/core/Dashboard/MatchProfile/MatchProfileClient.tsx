@@ -328,12 +328,18 @@ const MatchProfileClient = () => {
           // The response carries live quotas on every swipe; previously it was
           // discarded, which is why no counter could be shown.
           if (swipeResponse) {
+            const { superLikesDailyLimit: superLimit, superLikesRemaining: superRemaining } =
+              swipeResponse.limits
+
             setSwipesRemaining(swipeResponse.limits.swipesRemaining)
             setSuperQuota((previous) => ({
-              used: previous?.used ?? 0,
-              limit: swipeResponse.limits.superLikesDailyLimit,
-              remaining: swipeResponse.limits.superLikesRemaining,
-              available: swipeResponse.limits.superLikesDailyLimit !== 0,
+              used:
+                typeof superRemaining === "number" && superLimit > 0
+                  ? superLimit - superRemaining
+                  : previous?.used ?? 0,
+              limit: superLimit,
+              remaining: superRemaining,
+              available: superLimit !== 0,
             }))
           }
 
