@@ -72,6 +72,10 @@ export type MatchSummary = {
   status: "active" | "unmatched" | "blocked" | "expired"
   canChat: boolean
   canCall: boolean
+  /** How the match came about, so higher-intent connections can be flagged. */
+  origin?: "like" | "super_like"
+  viaSuperLike?: boolean
+  initiatedByMe?: boolean
   user: MatchParticipantSummary | null
   conversation: ChatConversation | null
 }
@@ -97,6 +101,9 @@ export type MatchSuggestion = {
     verificationBonus: number
   }
   matchReasons: string[]
+  /** True when this candidate Super Swiped you. Such candidates are hoisted to the front of the deck. */
+  superLikedYou: boolean
+  superLikedAt: string | null
 }
 
 export type MatchSuggestionProfile = {
@@ -147,11 +154,14 @@ export type SwipeResponse = {
     id: string
     direction: SwipeDirection
     swipedAt: string
+    superLikedAt: string | null
   }
   match: (MatchSummary & { isNewMatch: boolean }) | null
   limits: {
     swipesRemaining: number | "unlimited"
     dailyLimit: number
+    superLikesRemaining: number | "unlimited"
+    superLikesDailyLimit: number
   }
 }
 
@@ -188,16 +198,62 @@ export async function getMatchDetailsApi(matchId: string) {
 export type UndoSwipeResponse = {
   undoneSwipeId: string
   undoneSwipedUserId: string
+  undoneDirection: SwipeDirection
   unmatchedMatchId: string | null
   rewinds: {
     used: number
     limit: number | -1
     remaining: number | "unlimited"
   }
+  /** Reflects the refund when the undone swipe was a Super Swipe. */
+  superLikes: {
+    used: number
+    limit: number
+    remaining: number | "unlimited"
+  }
 }
 
 export async function undoSwipeApi() {
   return requestWithAuth<UndoSwipeResponse>("/matchmaking/undo", { method: "POST" })
+}
+
+export type ReceivedLike = {
+  swiperId: string | null
+  direction: "right" | "super"
+  /** Super Swipes are always revealed; plain right swipes need the entitlement. */
+  revealed: boolean
+  swipedAt: string
+  superLikedAt: string | null
+  user: MatchParticipantSummary | null
+}
+
+export type LikesReceivedResponse = {
+  likes: ReceivedLike[]
+  counts: {
+    total: number
+    superTotal: number
+  }
+  entitlement: {
+    canSeeWhoLikesYou: boolean
+    upgradeRequired: boolean
+  }
+  hasMore: boolean
+  offset: number
+}
+
+export async function listLikesReceivedApi(limit = 20, offset = 0, onlySuper = false) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  })
+
+  if (onlySuper) {
+    params.set("onlySuper", "true")
+  }
+
+  return requestWithAuth<LikesReceivedResponse>(
+    `/matchmaking/likes-received?${params.toString()}`,
+  )
 }
 
 export type MatchPreferences = {

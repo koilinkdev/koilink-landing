@@ -1,6 +1,9 @@
 import { background, common, error, primary, secondary } from "@/theme/palette"
 import { Box, styled } from "@mui/material"
 
+/** Super Swipe accent. Blue is the market-standard cue for this action. */
+const SUPER_SWIPE_BLUE = "#1E88E5"
+
 /**
  * Match Profile — "Match Studio" layout.
  * A focused candidate card on the left (frosted identity bar + score ring) and a
@@ -657,6 +660,23 @@ export const MatchProfileClientStyled = styled(Box)`
     &.save {
       color: ${secondary.main};
     }
+    /* Blue is the market-standard super like colour, and it keeps this button
+       visually distinct from Shortlist, which sits right beside it. */
+    &.super {
+      position: relative;
+      color: ${SUPER_SWIPE_BLUE};
+      border-color: rgba(30, 136, 229, 0.4);
+      &:hover:not(:disabled) {
+        box-shadow: 0 14px 28px rgba(30, 136, 229, 0.28);
+      }
+      &.isLocked {
+        color: var(--muted);
+        border-color: var(--line);
+        /* Deliberately not disabled: the click opens the paywall. */
+        opacity: 0.7;
+        cursor: pointer;
+      }
+    }
     &.like {
       width: 70px;
       height: 70px;
@@ -668,6 +688,23 @@ export const MatchProfileClientStyled = styled(Box)`
         font-size: 32px;
       }
     }
+  }
+  .dockBadge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background-color: ${SUPER_SWIPE_BLUE};
+    color: ${common.white};
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
   }
   .dockDivider {
     width: 1px;

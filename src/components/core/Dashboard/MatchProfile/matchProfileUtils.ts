@@ -1,7 +1,7 @@
-import { CloseRounded, HandshakeRounded, StarRounded } from "@mui/icons-material"
+import { BoltRounded, CloseRounded, HandshakeRounded, StarRounded } from "@mui/icons-material"
 import React from "react"
 import { ApiError } from "@/lib/auth-api"
-import type { SwipeDecision, SwipeLimitState } from "./matchProfileTypes"
+import type { QuotaType, SwipeDecision, SwipeLimitState } from "./matchProfileTypes"
 
 export const SWIPE_THRESHOLD = 110
 export const PREVIEW_THRESHOLD = 48
@@ -28,6 +28,13 @@ export const ACTION_META: Record<
     label: "Connect",
     helper: "Strong fit worth a conversation",
     icon: React.createElement(HandshakeRounded, { fontSize: "large" }),
+  },
+  // BoltRounded rather than a star: StarRounded is already Shortlist's, and an
+  // outlined star next to a filled one is unreadable at the dock's icon size.
+  super: {
+    label: "Super Swipe",
+    helper: "Jump to the front of their queue",
+    icon: React.createElement(BoltRounded, { fontSize: "large" }),
   },
 }
 
@@ -61,8 +68,20 @@ export const isRemoteImageUrl = (value?: string | null) => {
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
+/**
+ * Parses a quota rejection into structured state.
+ *
+ * Accepts 403 as well as 429 because the rewind endpoint answers 403 while the
+ * swipe endpoints answer 429. `quotaType` falls back to "swipes" when the server
+ * does not send it, so an older backend degrades to the previous behaviour
+ * instead of silently mislabelling the rejection.
+ */
 export const getSwipeLimitState = (error: unknown): SwipeLimitState | null => {
-  if (!(error instanceof ApiError) || error.status !== 429 || !isObjectRecord(error.details)) {
+  if (!(error instanceof ApiError) || !isObjectRecord(error.details)) {
+    return null
+  }
+
+  if (error.status !== 429 && error.status !== 403) {
     return null
   }
 
@@ -81,9 +100,24 @@ export const getSwipeLimitState = (error: unknown): SwipeLimitState | null => {
       ? error.details.current
       : null
 
+  const quotaType: QuotaType =
+    error.details.quotaType === "superLikes" ? "superLikes" : "swipes"
+
   return {
     message,
     dailyLimit,
     current,
+    quotaType,
+    upgradeRequired: error.details.upgradeRequired === true,
+    resetsAt:
+      typeof error.details.resetsAt === "string" && error.details.resetsAt
+        ? error.details.resetsAt
+        : null,
   }
 }
+
+export const formatQuotaRemaining = (remaining: number | "unlimited") =>
+  remaining === "unlimited" ? "unlimited" : String(remaining)
+
+export const hasQuotaRemaining = (remaining: number | "unlimited") =>
+  remaining === "unlimited" || remaining > 0
