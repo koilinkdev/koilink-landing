@@ -12,15 +12,6 @@ type MatchFeedbackBannerProps = {
   onUpgrade: () => void
 }
 
-const formatResetTime = (resetsAt: string | null) => {
-  if (!resetsAt) return null
-
-  const reset = new Date(resetsAt)
-  if (Number.isNaN(reset.getTime())) return null
-
-  return reset.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-}
-
 const MatchFeedbackBanner = React.memo(function MatchFeedbackBanner({
   feedbackMessage,
   matchedConversation,
@@ -32,20 +23,9 @@ const MatchFeedbackBanner = React.memo(function MatchFeedbackBanner({
     return null
   }
 
-  const isSuperQuota = swipeLimitState?.quotaType === "superLikes"
-  const resetTime = formatResetTime(swipeLimitState?.resetsAt ?? null)
 
   const meta = (() => {
     if (!swipeLimitState) return null
-
-    if (isSuperQuota) {
-      if (swipeLimitState.upgradeRequired) {
-        return "Super Swipes are not included in your current plan."
-      }
-      return resetTime
-        ? `Your Super Swipes reset at ${resetTime}. Ordinary swiping is unaffected.`
-        : "Your Super Swipes reset at midnight. Ordinary swiping is unaffected."
-    }
 
     return swipeLimitState.current !== null && swipeLimitState.dailyLimit !== null
       ? `You have used ${swipeLimitState.current} of ${swipeLimitState.dailyLimit} daily swipes.`

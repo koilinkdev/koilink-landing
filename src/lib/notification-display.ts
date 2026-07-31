@@ -94,10 +94,6 @@ export function formatNotificationSectionTitle(value?: string | Date | null) {
 
 export function getDrawerNotificationIcon(type?: NotificationType) {
   switch (type) {
-    case "super_like":
-      // Falls back to the shared user icon until a dedicated bolt asset exists;
-      // the accent colour below is the working differentiator in the meantime.
-      return "/assets/icons/User-icon.svg"
     case "connection":
     case "connection_request":
     case "match":
@@ -127,7 +123,6 @@ export function getNotificationPageIcon(type?: NotificationType) {
     case "connection_request":
     case "match":
     case "like":
-    case "super_like":
     case "profile_view":
     case "verification_complete":
       return "/assets/icons/box-icon-notification.svg"
@@ -139,10 +134,6 @@ export function getNotificationPageIcon(type?: NotificationType) {
 export function getNotificationPageIconColor(type?: NotificationType, index = 0) {
   // Checked before the index fallback below, which would otherwise make the
   // colour depend on list position rather than on the kind of notification.
-  if (type === "super_like") {
-    return "#E3F0FF"
-  }
-
   if (type === "subscription_expiry" || type === "system" || type === "match_expired") {
     return "#FFEFF1"
   }

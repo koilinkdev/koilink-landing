@@ -3,7 +3,7 @@
 import type { ChatConversation } from "./chat-api"
 import { requestWithAuth } from "./api-client"
 
-export type SwipeDirection = "left" | "right" | "super"
+export type SwipeDirection = "left" | "right"
 export type MatchSuggestionRoleType = "investor" | "company" | "broker"
 
 export type MatchSuggestionInvestorProfile = {
@@ -72,9 +72,6 @@ export type MatchSummary = {
   status: "active" | "unmatched" | "blocked" | "expired"
   canChat: boolean
   canCall: boolean
-  /** How the match came about, so higher-intent connections can be flagged. */
-  origin?: "like" | "super_like"
-  viaSuperLike?: boolean
   initiatedByMe?: boolean
   user: MatchParticipantSummary | null
   conversation: ChatConversation | null
@@ -101,9 +98,6 @@ export type MatchSuggestion = {
     verificationBonus: number
   }
   matchReasons: string[]
-  /** True when this candidate Super Swiped you. Such candidates are hoisted to the front of the deck. */
-  superLikedYou: boolean
-  superLikedAt: string | null
 }
 
 export type MatchSuggestionProfile = {
@@ -154,7 +148,6 @@ export type SwipeResponse = {
     id: string
     direction: SwipeDirection
     swipedAt: string
-    superLikedAt: string | null
   }
   match: (MatchSummary & { isNewMatch: boolean }) | null
   /**
@@ -165,8 +158,6 @@ export type SwipeResponse = {
   limits: {
     swipesRemaining: number | "unlimited"
     dailyLimit: number
-    superLikesRemaining: number | "unlimited"
-    superLikesDailyLimit: number
   }
 }
 
@@ -210,12 +201,6 @@ export type UndoSwipeResponse = {
     limit: number | -1
     remaining: number | "unlimited"
   }
-  /** Reflects the refund when the undone swipe was a Super Swipe. */
-  superLikes: {
-    used: number
-    limit: number
-    remaining: number | "unlimited"
-  }
 }
 
 export async function undoSwipeApi() {
@@ -224,11 +209,10 @@ export async function undoSwipeApi() {
 
 export type ReceivedLike = {
   swiperId: string | null
-  direction: "right" | "super"
-  /** Super Swipes are always revealed; plain right swipes need the entitlement. */
+  direction: "right"
+  /** False when the viewer's plan does not include seeing who liked them. */
   revealed: boolean
   swipedAt: string
-  superLikedAt: string | null
   user: MatchParticipantSummary | null
 }
 
@@ -236,7 +220,6 @@ export type LikesReceivedResponse = {
   likes: ReceivedLike[]
   counts: {
     total: number
-    superTotal: number
   }
   entitlement: {
     canSeeWhoLikesYou: boolean
@@ -246,15 +229,11 @@ export type LikesReceivedResponse = {
   offset: number
 }
 
-export async function listLikesReceivedApi(limit = 20, offset = 0, onlySuper = false) {
+export async function listLikesReceivedApi(limit = 20, offset = 0) {
   const params = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   })
-
-  if (onlySuper) {
-    params.set("onlySuper", "true")
-  }
 
   return requestWithAuth<LikesReceivedResponse>(
     `/matchmaking/likes-received?${params.toString()}`,

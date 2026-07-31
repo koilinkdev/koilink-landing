@@ -1,8 +1,6 @@
 import { background, common, error, primary, secondary } from "@/theme/palette"
 import { Box, styled } from "@mui/material"
 
-/** Super Swipe accent. Blue is the market-standard cue for this action. */
-const SUPER_SWIPE_BLUE = "#1E88E5"
 
 /**
  * Match Profile — "Match Studio" layout.
@@ -306,29 +304,6 @@ export const MatchProfileClientStyled = styled(Box)`
     }
   }
 
-  /* The ring marks someone who Super Swiped the viewer. Applied to the back card
-     too, so the signal is visible one card ahead. */
-  .matchDeckCard.isSuperLiked,
-  .deckBackCard.isSuperLiked {
-    box-shadow: 0 0 0 3px ${SUPER_SWIPE_BLUE}, var(--shadow-card);
-  }
-  .superLikeBadge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background-color: ${SUPER_SWIPE_BLUE};
-    color: ${common.white};
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    svg {
-      font-size: 14px;
-    }
-  }
-
   /* Light top gradient keeps top pills legible without hiding the face */
   .cardTopScrim {
     position: absolute;
@@ -478,11 +453,6 @@ export const MatchProfileClientStyled = styled(Box)`
     &.save {
       background: radial-gradient(circle, rgba(48, 102, 190, 0.52), rgba(48, 102, 190, 0.18));
       box-shadow: 0 0 70px rgba(48, 102, 190, 0.3);
-    }
-    /* Brighter and larger than .save so the two upward exits read differently. */
-    &.super {
-      background: radial-gradient(circle, rgba(30, 136, 229, 0.68), rgba(30, 136, 229, 0.22));
-      box-shadow: 0 0 90px rgba(30, 136, 229, 0.55);
     }
   }
   .decisionLabel {
@@ -688,23 +658,6 @@ export const MatchProfileClientStyled = styled(Box)`
     &.save {
       color: ${secondary.main};
     }
-    /* Blue is the market-standard super like colour, and it keeps this button
-       visually distinct from Shortlist, which sits right beside it. */
-    &.super {
-      position: relative;
-      color: ${SUPER_SWIPE_BLUE};
-      border-color: rgba(30, 136, 229, 0.4);
-      &:hover:not(:disabled) {
-        box-shadow: 0 14px 28px rgba(30, 136, 229, 0.28);
-      }
-      &.isLocked {
-        color: var(--muted);
-        border-color: var(--line);
-        /* Deliberately not disabled: the click opens the paywall. */
-        opacity: 0.7;
-        cursor: pointer;
-      }
-    }
     &.like {
       width: 70px;
       height: 70px;
@@ -716,23 +669,6 @@ export const MatchProfileClientStyled = styled(Box)`
         font-size: 32px;
       }
     }
-  }
-  .dockBadge {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background-color: ${SUPER_SWIPE_BLUE};
-    color: ${common.white};
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1;
   }
   .dockDivider {
     width: 1px;

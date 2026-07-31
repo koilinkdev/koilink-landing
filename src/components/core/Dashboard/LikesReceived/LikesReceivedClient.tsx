@@ -1,16 +1,13 @@
 "use client"
 
-import { BoltRounded, LockRounded, VerifiedRounded } from "@mui/icons-material"
+import { LockRounded, VerifiedRounded } from "@mui/icons-material"
 import {
   Alert,
   Avatar,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Stack,
-  Tab,
-  Tabs,
   Typography,
 } from "@mui/material"
 import { useRouter } from "next/navigation"
@@ -22,7 +19,6 @@ const PAGE_SIZE = 20
 
 const LikesReceivedClient = () => {
   const router = useRouter()
-  const [onlySuper, setOnlySuper] = React.useState(false)
   const [data, setData] = React.useState<LikesReceivedResponse | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -32,7 +28,7 @@ const LikesReceivedClient = () => {
     setIsLoading(true)
     setError(null)
 
-    listLikesReceivedApi(PAGE_SIZE, 0, onlySuper)
+    listLikesReceivedApi(PAGE_SIZE, 0)
       .then((response) => {
         if (!cancelled) setData(response)
       })
@@ -48,7 +44,7 @@ const LikesReceivedClient = () => {
     return () => {
       cancelled = true
     }
-  }, [onlySuper])
+  }, [])
 
   const hiddenCount = React.useMemo(
     () => (data?.likes ?? []).filter((like) => !like.revealed).length,
@@ -61,17 +57,9 @@ const LikesReceivedClient = () => {
         Interested in you
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Everyone who swiped right or Super Swiped on your profile.
+        Everyone who swiped right on your profile
+        {data?.counts.total ? ` (${data.counts.total})` : ""}.
       </Typography>
-
-      <Tabs
-        value={onlySuper ? 1 : 0}
-        onChange={(_event, value) => setOnlySuper(value === 1)}
-        sx={{ mb: 2 }}
-      >
-        <Tab label={`All (${data?.counts.total ?? 0})`} />
-        <Tab label={`Super Swipes (${data?.counts.superTotal ?? 0})`} />
-      </Tabs>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -96,7 +84,7 @@ const LikesReceivedClient = () => {
           }
         >
           {hiddenCount} {hiddenCount === 1 ? "person is" : "people are"} interested but hidden on
-          your plan. Super Swipes are always shown.
+          your plan.
         </Alert>
       )}
 
@@ -106,9 +94,7 @@ const LikesReceivedClient = () => {
         </Stack>
       ) : (data?.likes.length ?? 0) === 0 ? (
         <Typography variant="body2" color="text.secondary">
-          {onlySuper
-            ? "No one has Super Swiped you yet."
-            : "No one has swiped right on you yet."}
+          No one has swiped right on you yet.
         </Typography>
       ) : (
         <Stack spacing={1.5}>
@@ -121,7 +107,7 @@ const LikesReceivedClient = () => {
               sx={{
                 p: 1.5,
                 border: "1px solid",
-                borderColor: like.direction === "super" ? "#1E88E5" : "divider",
+                borderColor: "divider",
                 borderRadius: 2,
                 cursor: like.revealed && like.swiperId ? "pointer" : "default",
               }}
@@ -149,14 +135,6 @@ const LikesReceivedClient = () => {
                   {like.revealed && like.user?.isVerified && (
                     <VerifiedRounded sx={{ fontSize: 16, color: "primary.main" }} />
                   )}
-                  {like.direction === "super" && (
-                    <Chip
-                      size="small"
-                      icon={<BoltRounded />}
-                      label="Super Swipe"
-                      sx={{ bgcolor: "#E3F0FF", color: "#1E88E5", fontWeight: 600 }}
-                    />
-                  )}
                 </Stack>
                 <Typography variant="body2" color="text.secondary" noWrap>
                   {like.revealed
@@ -168,7 +146,7 @@ const LikesReceivedClient = () => {
               </Box>
 
               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-                {formatNotificationTime(like.superLikedAt ?? like.swipedAt)}
+                {formatNotificationTime(like.swipedAt)}
               </Typography>
             </Stack>
           ))}

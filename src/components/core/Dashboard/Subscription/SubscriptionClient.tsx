@@ -1,6 +1,6 @@
 "use client"
 
-import { BoltRounded, CheckRounded, ReplayRounded, VisibilityRounded } from "@mui/icons-material"
+import { CheckRounded, ReplayRounded, VisibilityRounded } from "@mui/icons-material"
 import {
   Alert,
   Box,
@@ -40,15 +40,6 @@ const describeQuota = (quota: QuotaUsage | undefined) => {
   if (quota.unlimited) return "Unlimited"
 
   return `${quota.remaining} of ${quota.limit} left today`
-}
-
-const describeSuperSwipes = (plan: ComparablePlan) => {
-  const perDay = plan.features?.superLikesPerDay
-
-  if (typeof perDay !== "number" || perDay === 0) return "No Super Swipes"
-  if (perDay === -1) return "Unlimited Super Swipes"
-
-  return `${perDay} Super Swipe${perDay === 1 ? "" : "s"} per day`
 }
 
 const SubscriptionClient = () => {
@@ -149,17 +140,6 @@ const SubscriptionClient = () => {
         divider={<Divider orientation="vertical" flexItem />}
       >
         <Box sx={{ flex: 1 }}>
-          <Stack direction="row" spacing={0.75} alignItems="center">
-            <BoltRounded sx={{ fontSize: 18, color: "#1E88E5" }} />
-            <Typography variant="body2" color="text.secondary">
-              Super Swipes
-            </Typography>
-          </Stack>
-          <Typography sx={{ fontWeight: 700 }}>
-            {describeQuota(limits?.usage.superLikes)}
-          </Typography>
-        </Box>
-        <Box sx={{ flex: 1 }}>
           <Typography variant="body2" color="text.secondary">
             Swipes
           </Typography>
@@ -226,12 +206,6 @@ const SubscriptionClient = () => {
                     <Typography variant="body2" color="text.secondary">
                       {plan.description}
                     </Typography>
-                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.75 }}>
-                      <BoltRounded sx={{ fontSize: 16, color: "#1E88E5" }} />
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {describeSuperSwipes(plan)}
-                      </Typography>
-                    </Stack>
                     {plan.benefits?.length ? (
                       <Stack sx={{ mt: 1 }} spacing={0.25}>
                         {plan.benefits.map((benefit) => (

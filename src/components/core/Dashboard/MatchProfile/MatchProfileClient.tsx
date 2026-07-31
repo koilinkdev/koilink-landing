@@ -22,13 +22,11 @@ import MatchFeedbackBanner from "./MatchFeedbackBanner"
 import MatchFilterDrawer from "./MatchFilterDrawer"
 import MatchInsightsPanel from "./MatchInsightsPanel"
 import MatchProfileHeader from "./MatchProfileHeader"
-import SuperLikePaywallDialog from "./SuperLikePaywallDialog"
 import { getMyLimitsApi } from "@/lib/subscription-api"
 import { getShortlistRejection } from "@/lib/shortlist-api"
 import { useShortlist } from "../Shortlist/ShortlistProvider"
 import type {
   MatchedConversation,
-  SuperLikeQuota,
   SwipeDecision,
   SwipeLimitState,
 } from "./matchProfileTypes"
@@ -74,12 +72,7 @@ const MatchProfileClient = () => {
   const [nextOffset, setNextOffset] = React.useState(0)
   const [feedbackMessage, setFeedbackMessage] = React.useState<string | null>(null)
   const [swipeLimitState, setSwipeLimitState] = React.useState<SwipeLimitState | null>(null)
-  // Kept separate from swipeLimitState on purpose: exhausting Super Swipes must
-  // never disable Pass/Connect, which a single shared flag would do.
-  const [superLimitState, setSuperLimitState] = React.useState<SwipeLimitState | null>(null)
-  const [superQuota, setSuperQuota] = React.useState<SuperLikeQuota | null>(null)
   const [swipesRemaining, setSwipesRemaining] = React.useState<number | "unlimited" | null>(null)
-  const [isPaywallOpen, setIsPaywallOpen] = React.useState(false)
   const [matchedConversation, setMatchedConversation] = React.useState<MatchedConversation>(null)
   const [connectedIds, setConnectedIds] = React.useState<string[]>([])
   const [passedIds, setPassedIds] = React.useState<string[]>([])
@@ -116,11 +109,6 @@ const MatchProfileClient = () => {
   const canSwipe = !swipeLimitState
   const canInteract = Boolean(currentProfile) && !isAnimating && !isLoading && canSwipe
   const canShortlist = Boolean(currentProfile) && !isAnimating && !isLoading
-  // Optimistically true until the bootstrap fetch answers, so the button is not
-  // briefly disabled for users who do have quota.
-  const hasSuperQuota = superQuota ? hasQuotaRemaining(superQuota.remaining) : true
-  const superLikesAvailable = superQuota ? superQuota.available : true
-  const canSuperLike = canInteract && superLikesAvailable && hasSuperQuota && !superLimitState
   const remainingCount = Math.max(profiles.length - activeIndex, 0)
   const activeFilterCount = React.useMemo(() => countActiveFilters(savedPrefs), [savedPrefs])
   // The persisted total, not this session's tally, so it always agrees with the
@@ -140,20 +128,12 @@ const MatchProfileClient = () => {
       stats.splice(1, 0, { label: "Swipes left", value: swipesRemaining })
     }
 
-    if (superQuota && superQuota.available && superQuota.remaining !== "unlimited") {
-      stats.splice(typeof swipesRemaining === "number" ? 2 : 1, 0, {
-        label: "Super Swipes",
-        value: superQuota.remaining,
-      })
-    }
-
     return stats
   }, [
     connectedIds.length,
     passedIds.length,
     remainingCount,
     shortlistedCount,
-    superQuota,
     swipesRemaining,
   ])
 
@@ -246,16 +226,11 @@ const MatchProfileClient = () => {
   const refreshQuotas = React.useCallback(async () => {
     try {
       const limits = await getMyLimitsApi()
-      setSuperQuota(limits.usage.superLikes)
       setSwipesRemaining(limits.usage.swipes.remaining)
       setRewindsUsed(limits.usage.rewinds.used)
       setRewindLimit(
         limits.usage.rewinds.unlimited ? "unlimited" : limits.usage.rewinds.limit,
       )
-
-      if (hasQuotaRemaining(limits.usage.superLikes.remaining)) {
-        setSuperLimitState(null)
-      }
 
       if (hasQuotaRemaining(limits.usage.swipes.remaining)) {
         setSwipeLimitState(null)
@@ -291,8 +266,8 @@ const MatchProfileClient = () => {
         return
       }
 
-      // Same reasoning as the Super Swipe pre-check below: a full shortlist is
-      // known client-side, so reject before the card animates away.
+      // A full shortlist is known client-side, so reject before the card
+      // animates away rather than advancing and rolling back.
       if (decision === "save" && shortlist?.capacity.isFull) {
         setFeedbackMessage(
           `Your shortlist is full (${shortlist.capacity.limit}). Act on a few saved profiles to make room.`,
@@ -300,19 +275,6 @@ const MatchProfileClient = () => {
         return
       }
 
-      // Checked before spending the animation so an out-of-quota tap opens the
-      // paywall immediately rather than advancing the card and rolling back.
-      if (decision === "super" && !canSuperLike) {
-        if (!superLikesAvailable) {
-          setIsPaywallOpen(true)
-          setFeedbackMessage("Super Swipes are a paid feature.")
-        } else {
-          setFeedbackMessage(
-            superLimitState?.message || "You are out of Super Swipes for today.",
-          )
-        }
-        return
-      }
 
       clearAnimationTimer()
       setIsAnimating(true)
@@ -357,7 +319,7 @@ const MatchProfileClient = () => {
 
           const swipeResponse = await swipeProfileApi(
             processedProfile.userId,
-            decision === "super" ? "super" : decision === "like" ? "right" : "left",
+            decision === "like" ? "right" : "left",
           )
 
           // Only reachable when a shortlisted profile was somehow still in the
@@ -368,21 +330,9 @@ const MatchProfileClient = () => {
 
           // The response carries live quotas on every swipe; previously it was
           // discarded, which is why no counter could be shown.
-          const { superLikesDailyLimit: superLimit, superLikesRemaining: superRemaining } =
-            swipeResponse.limits
-
           setSwipesRemaining(swipeResponse.limits.swipesRemaining)
-          setSuperQuota((previous) => ({
-            used:
-              typeof superRemaining === "number" && superLimit > 0
-                ? superLimit - superRemaining
-                : previous?.used ?? 0,
-            limit: superLimit,
-            remaining: superRemaining,
-            available: superLimit !== 0,
-          }))
 
-          if (decision === "like" || decision === "super") {
+          if (decision === "like") {
             setConnectedIds((ids) => appendUnique(ids, processedProfile.id))
             setSwipeLimitState(null)
 
@@ -393,10 +343,6 @@ const MatchProfileClient = () => {
                 displayName: matchedName,
               })
               setFeedbackMessage(`It's a match with ${matchedName}. Chat is now unlocked.`)
-            } else if (decision === "super") {
-              setFeedbackMessage(
-                `Super Swiped ${processedProfile.name}. You are now at the front of their queue.`,
-              )
             } else {
               setFeedbackMessage(`Interest recorded for ${processedProfile.name}.`)
             }
@@ -424,24 +370,7 @@ const MatchProfileClient = () => {
           }
 
           if (limitState) {
-            // Routed by quota type so a spent Super Swipe allowance leaves
-            // ordinary swiping fully usable.
-            if (limitState.quotaType === "superLikes") {
-              setSuperLimitState(limitState)
-              setSuperQuota((previous) => ({
-                used: limitState.current ?? previous?.used ?? 0,
-                limit: limitState.dailyLimit ?? previous?.limit ?? 0,
-                remaining: 0,
-                available: (limitState.dailyLimit ?? previous?.limit ?? 0) !== 0,
-              }))
-
-              if (limitState.upgradeRequired) {
-                setIsPaywallOpen(true)
-              }
-            } else {
-              setSwipeLimitState(limitState)
-            }
-
+            setSwipeLimitState(limitState)
             setFeedbackMessage(limitState.message)
             return
           }
@@ -451,15 +380,12 @@ const MatchProfileClient = () => {
       }, ANIMATION_DURATION)
     },
     [
-      canSuperLike,
       canSwipe,
       clearAnimationTimer,
       currentProfile,
       isAnimating,
       isLoading,
       shortlist,
-      superLikesAvailable,
-      superLimitState,
       swipeLimitState,
     ],
   )
@@ -485,14 +411,9 @@ const MatchProfileClient = () => {
         advanceProfile("like")
       }
 
-      // Up-swipe is the universal Super Like gesture, so it takes ArrowUp and
-      // Shortlist moves to ArrowDown.
-      if (event.key === "ArrowUp") {
-        event.preventDefault()
-        advanceProfile("super")
-      }
-
-      if (event.key === "ArrowDown") {
+      // Either vertical arrow shortlists; there is no longer a second
+      // upward action to disambiguate from.
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         event.preventDefault()
         advanceProfile("save")
       }
@@ -517,23 +438,7 @@ const MatchProfileClient = () => {
       setRewindsUsed(result.rewinds.used)
       setRewindLimit(result.rewinds.remaining === "unlimited" ? "unlimited" : result.rewinds.limit)
 
-      // The server refunds a rewound Super Swipe, so the badge has to follow.
-      setSuperQuota((previous) => ({
-        used: result.superLikes.used,
-        limit: result.superLikes.limit,
-        remaining: result.superLikes.remaining,
-        available: previous ? previous.available : result.superLikes.limit !== 0,
-      }))
-
-      if (hasQuotaRemaining(result.superLikes.remaining)) {
-        setSuperLimitState(null)
-      }
-
-      setFeedbackMessage(
-        result.undoneDirection === "super"
-          ? "Super Swipe undone and returned to your daily allowance."
-          : "Last swipe undone.",
-      )
+      setFeedbackMessage("Last swipe undone.")
     } catch (error) {
       // The rewind endpoint answers 403 with structured limit details, which used
       // to be flattened into a plain message with no upgrade affordance.
@@ -542,7 +447,7 @@ const MatchProfileClient = () => {
       if (limitState) {
         setFeedbackMessage(limitState.message)
         if (limitState.upgradeRequired) {
-          setIsPaywallOpen(true)
+          router.push("/dashboard/subscription")
         }
         return
       }
@@ -551,7 +456,7 @@ const MatchProfileClient = () => {
     } finally {
       setIsRewinding(false)
     }
-  }, [activeIndex, isRewinding])
+  }, [activeIndex, isRewinding, router])
 
   const handleSaveFilter = React.useCallback(async () => {
     setIsSavingFilter(true)
@@ -692,17 +597,8 @@ const MatchProfileClient = () => {
   const currentCardTransform =
     activeDecision === "save"
       ? "translate3d(0px, -96px, 0px) scale(0.95)"
-      : activeDecision === "super"
-        ? // Exits further up than Shortlist, and the styled layer adds a glow, so
-          // the two upward animations are not mistaken for each other.
-          "translate3d(0px, -150px, 0px) scale(1.02)"
-        : `translate3d(${dragX}px, 0px, 0px) rotate(${dragX / 18}deg) scale(${isDragging ? 1.01 : 1})`
-  const currentCardOpacity =
-    (activeDecision === "save" || activeDecision === "super") && isAnimating ? 0 : 1
-
-  // The super quota banner takes precedence only when ordinary swiping is fine,
-  // so the more restrictive message is never hidden by the narrower one.
-  const bannerLimitState = swipeLimitState ?? superLimitState
+      : `translate3d(${dragX}px, 0px, 0px) rotate(${dragX / 18}deg) scale(${isDragging ? 1.01 : 1})`
+  const currentCardOpacity = activeDecision === "save" && isAnimating ? 0 : 1
 
   return (
     <MatchProfileClientStyled>
@@ -715,9 +611,9 @@ const MatchProfileClient = () => {
       <MatchFeedbackBanner
         feedbackMessage={feedbackMessage}
         matchedConversation={matchedConversation}
-        swipeLimitState={bannerLimitState}
+        swipeLimitState={swipeLimitState}
         onOpenConversation={openMatchedConversation}
-        onUpgrade={() => setIsPaywallOpen(true)}
+        onUpgrade={() => router.push("/dashboard/subscription")}
       />
 
       <Box className="studioGrid">
@@ -749,12 +645,8 @@ const MatchProfileClient = () => {
             rewindsUsed={rewindsUsed}
             canInteract={canInteract}
             canShortlist={canShortlist}
-            canSuperLike={canSuperLike}
-            superLikesAvailable={superLikesAvailable}
-            superLikesRemaining={superQuota?.remaining ?? null}
             onUndo={() => { void handleUndo() }}
             onAdvance={advanceProfile}
-            onUpgrade={() => setIsPaywallOpen(true)}
           />
         </Box>
 
@@ -785,12 +677,6 @@ const MatchProfileClient = () => {
         onSave={() => { void handleSaveFilter() }}
       />
 
-      <SuperLikePaywallDialog
-        open={isPaywallOpen}
-        superQuota={superQuota}
-        limitState={superLimitState}
-        onClose={() => setIsPaywallOpen(false)}
-      />
     </MatchProfileClientStyled>
   )
 }

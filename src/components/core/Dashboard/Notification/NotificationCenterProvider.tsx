@@ -64,7 +64,7 @@ export function NotificationCenterProvider({ children }: { children: React.React
   }, [refreshUnreadCount])
 
   // Show one toast at a time; promote the head of the queue when the slot frees.
-  // High-priority items (Super Swipes, new connections) jump the queue so they are
+  // High-priority items (new connections) jump the queue so they are
   // not buried behind a backlog of low-value notices.
   React.useEffect(() => {
     if (activeToast || queue.length === 0) {
@@ -181,10 +181,7 @@ export function NotificationCenterProvider({ children }: { children: React.React
             p: 1.5,
             borderRadius: "12px",
             backgroundColor: "#FFFFFF",
-            border:
-              activeToast?.type === "super_like"
-                ? "1px solid #1E88E5"
-                : "1px solid rgba(109, 157, 197, 0.25)",
+            border: "1px solid rgba(109, 157, 197, 0.25)",
             boxShadow: "0 12px 32px rgba(13, 28, 46, 0.16)",
           }}
         >

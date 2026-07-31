@@ -17,7 +17,6 @@ export type QuotaUsage = {
 
 export type PlanFeatureFlags = {
   unlimitedSwipes: boolean
-  superLikesPerDay: number
   rewindEnabled: boolean
   seeWhoLikesYou: boolean
   priorityMatching: boolean
@@ -34,7 +33,6 @@ export type MyLimits = {
   }
   usage: {
     swipes: QuotaUsage
-    superLikes: QuotaUsage
     rewinds: QuotaUsage
   }
   features: PlanFeatureFlags
@@ -53,7 +51,7 @@ export type ComparablePlan = {
   description?: string
   benefits?: string[]
   displayOrder?: number
-  features?: Partial<PlanFeatureFlags> & { superLikesPerDay?: number }
+  features?: Partial<PlanFeatureFlags>
   limits?: {
     dailySwipes?: number
     monthlyMatches?: number
@@ -66,13 +64,7 @@ export type ComparePlansResponse = {
   currentPlan: { id: string; tier: string } | null
 }
 
-/**
- * The client's entitlement source of truth.
- *
- * Read `usage.superLikes` rather than `features.superLikesPerDay` when deciding
- * what to render: with no plan documents seeded the raw feature value is absent,
- * while the usage block always reflects the resolved tier fallback.
- */
+/** The client's entitlement source of truth. */
 export async function getMyLimitsApi() {
   return requestWithAuth<MyLimits>("/subscriptions/limits")
 }

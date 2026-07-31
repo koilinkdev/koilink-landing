@@ -9,7 +9,6 @@ export type NotificationType =
   | "message"
   | "document_shared"
   | "like"
-  | "super_like"
   | "profile_view"
   | "deal_update"
   | "meeting_scheduled"

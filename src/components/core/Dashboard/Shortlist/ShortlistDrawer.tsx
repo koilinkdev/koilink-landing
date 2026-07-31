@@ -42,16 +42,12 @@ type Banner = {
 
 type QuotaState = {
   canSwipe: boolean
-  canSuperLike: boolean
-  superLikesAvailable: boolean
 }
 
 // Optimistic until the limits call answers, so buttons are not briefly disabled
 // for users who do have quota.
 const OPTIMISTIC_QUOTA: QuotaState = {
   canSwipe: true,
-  canSuperLike: true,
-  superLikesAvailable: true,
 }
 
 const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
@@ -101,8 +97,6 @@ const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
       const limits = await getMyLimitsApi()
       setQuota({
         canSwipe: hasQuotaRemaining(limits.usage.swipes.remaining),
-        canSuperLike: hasQuotaRemaining(limits.usage.superLikes.remaining),
-        superLikesAvailable: limits.usage.superLikes.available,
       })
     } catch {
       // The server is authoritative on every swipe, so the worst case of an
@@ -188,7 +182,7 @@ const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
           return
         }
 
-        const direction = action === "like" ? "right" : action === "super" ? "super" : "left"
+        const direction = action === "like" ? "right" : "left"
         const response = await swipeProfileApi(card.userId, direction)
 
         // The server clears the parked entry as part of the swipe, so the badge
@@ -196,12 +190,7 @@ const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
         shortlist?.registerExternalRemoval()
         dropItem(card.userId)
 
-        setQuota((previous) => ({
-          ...previous,
-          canSwipe: hasQuotaRemaining(response.limits.swipesRemaining),
-          canSuperLike: hasQuotaRemaining(response.limits.superLikesRemaining),
-          superLikesAvailable: response.limits.superLikesDailyLimit !== 0,
-        }))
+        setQuota({ canSwipe: hasQuotaRemaining(response.limits.swipesRemaining) })
 
         if (response.match?.isNewMatch && response.match.conversationId) {
           const conversationId = response.match.conversationId
@@ -220,11 +209,9 @@ const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
         setBanner({
           severity: "success",
           message:
-            action === "super"
-              ? `Super Swiped ${card.name}. You are at the front of their queue.`
-              : action === "like"
-                ? `Interest recorded for ${card.name}.`
-                : `Passed on ${card.name}.`,
+            action === "like"
+              ? `Interest recorded for ${card.name}.`
+              : `Passed on ${card.name}.`,
         })
       } catch (error) {
         // A quota rejection leaves the row in place: the candidate is still
@@ -232,15 +219,7 @@ const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
         const limitState = getSwipeLimitState(error)
 
         if (limitState) {
-          if (limitState.quotaType === "superLikes") {
-            setQuota((previous) => ({
-              ...previous,
-              canSuperLike: false,
-              superLikesAvailable: (limitState.dailyLimit ?? 0) !== 0,
-            }))
-          } else {
-            setQuota((previous) => ({ ...previous, canSwipe: false }))
-          }
+          setQuota({ canSwipe: false })
 
           setBanner({
             severity: "warning",
@@ -277,10 +256,6 @@ const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
     [onClose, router],
   )
 
-  const handleUpgrade = React.useCallback(() => {
-    onClose()
-    router.push("/dashboard/subscription")
-  }, [onClose, router])
 
   // Hidden below 60%: an empty shortlist framed as "0 of 100" reads as a target
   // to fill rather than a queue to clear.
@@ -386,11 +361,8 @@ const ShortlistDrawer = ({ open, onClose }: ShortlistDrawerProps) => {
                 shortlistedAt={item.shortlistedAt}
                 isBusy={busyUserId === item.card.userId}
                 canSwipe={quota.canSwipe}
-                canSuperLike={quota.canSuperLike}
-                superLikesAvailable={quota.superLikesAvailable}
                 onAction={(action, card) => void handleAction(action, card)}
                 onOpenProfile={handleOpenProfile}
-                onUpgrade={handleUpgrade}
               />
             ))}
 

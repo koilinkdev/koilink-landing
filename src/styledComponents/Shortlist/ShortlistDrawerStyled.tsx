@@ -1,5 +1,5 @@
 import { Drawer, styled } from "@mui/material"
-import { common, primary } from "@/theme/palette"
+import { primary } from "@/theme/palette"
 import {
   elevation,
   intent,
@@ -151,11 +151,6 @@ export const ShortlistDrawerStyled = styled(Drawer)`
       opacity: 0.55;
       pointer-events: none;
     }
-    /* Matches the deck's treatment for a candidate who Super Swiped you. */
-    &.superLikedYou {
-      border-color: ${intent.super.border};
-      background: linear-gradient(180deg, ${intent.super.tint} 0%, ${surface.page} 56%);
-    }
   }
 
   .rowMain {
@@ -210,22 +205,6 @@ export const ShortlistDrawerStyled = styled(Drawer)`
     flex-shrink: 0;
     font-size: 15px;
     color: ${primary.main};
-  }
-  .rowSuperBadge {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    padding: 1px ${space.xs + 2}px;
-    border-radius: ${radius.pill}px;
-    background-color: ${intent.super.fg};
-    color: ${common.white};
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    svg {
-      font-size: 12px;
-    }
   }
   .rowMeta {
     margin-top: 2px;
@@ -304,17 +283,6 @@ export const ShortlistDrawerStyled = styled(Drawer)`
     &.pass {
       color: ${intent.pass.fg};
       border-color: ${intent.pass.border};
-    }
-    &.super {
-      color: ${intent.super.fg};
-      border-color: ${intent.super.border};
-      &.isLocked {
-        color: ${surface.muted};
-        border-color: ${surface.lineSoft};
-        /* Deliberately still clickable: the click opens the paywall. */
-        opacity: 0.7;
-        cursor: pointer;
-      }
     }
     &.connect {
       width: 40px;

@@ -10,18 +10,9 @@ import { common, error, primary, secondary } from "./palette"
  * approximating it with fresh hex codes.
  *
  * Every colour here resolves through `palette.ts`. Nothing in this file should
- * introduce a literal hex that the palette does not already own, with the single
- * documented exception of SUPER_SWIPE_BLUE below.
+ * introduce a literal hex that the palette does not already own; the rgba values
+ * below are tints of palette colours, not new ones.
  */
-
-/**
- * The market-standard super-like blue. Lives outside the brand palette on
- * purpose: it is a category convention (Tinder/Bumble) rather than a KoiLink
- * colour, and it has to stay distinguishable from `secondary.main`, which is
- * Shortlist's colour and sits directly beside it in the action dock.
- */
-export const SUPER_SWIPE_BLUE = "#1E88E5"
-export const SUPER_SWIPE_TINT = "#E3F0FF"
 
 /** 4px base scale. Use these instead of arbitrary pixel values. */
 export const space = {
@@ -71,7 +62,7 @@ export const typeScale = {
 } as const
 
 /**
- * Semantic colours for the four swipe decisions. These mirror the match deck's
+ * Semantic colours for the swipe decisions. These mirror the match deck's
  * action dock exactly, so a Connect button in the shortlist drawer is the same
  * colour as the Connect button under the card.
  */
@@ -85,11 +76,6 @@ export const intent = {
     fg: secondary.main,
     border: "rgba(48, 102, 190, 0.28)",
     tint: "rgba(48, 102, 190, 0.08)",
-  },
-  super: {
-    fg: SUPER_SWIPE_BLUE,
-    border: "rgba(30, 136, 229, 0.40)",
-    tint: SUPER_SWIPE_TINT,
   },
   connect: {
     fg: common.white,

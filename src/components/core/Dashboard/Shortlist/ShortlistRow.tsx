@@ -2,31 +2,25 @@
 
 import React from "react"
 import {
-  BoltRounded,
   CloseRounded,
   DeleteOutlineRounded,
   HandshakeRounded,
-  LockRounded,
   VerifiedRounded,
 } from "@mui/icons-material"
 import { Avatar, Box, Tooltip } from "@mui/material"
 import { formatNotificationTime } from "@/lib/notification-display"
 import type { MatchProfileCard } from "@/lib/matchmaking-presenters"
 
-export type ShortlistRowAction = "pass" | "super" | "like" | "remove"
+export type ShortlistRowAction = "pass" | "like" | "remove"
 
 type ShortlistRowProps = {
   card: MatchProfileCard
   shortlistedAt: string
   isBusy: boolean
-  /** Disables the three swipe actions when the daily swipe quota is spent. */
+  /** Disables the swipe actions when the daily swipe quota is spent. */
   canSwipe: boolean
-  canSuperLike: boolean
-  /** False when the plan has no Super Swipes at all, as opposed to none left today. */
-  superLikesAvailable: boolean
   onAction: (action: ShortlistRowAction, card: MatchProfileCard) => void
   onOpenProfile: (card: MatchProfileCard) => void
-  onUpgrade: () => void
 }
 
 const ShortlistRow = React.memo(function ShortlistRow({
@@ -34,25 +28,16 @@ const ShortlistRow = React.memo(function ShortlistRow({
   shortlistedAt,
   isBusy,
   canSwipe,
-  canSuperLike,
-  superLikesAvailable,
   onAction,
   onOpenProfile,
-  onUpgrade,
 }: ShortlistRowProps) {
   const metaLine = [card.profileSubtypeLabel || card.userTypeLabel, card.location]
     .filter(Boolean)
     .join(" · ")
 
-  const superTitle = !superLikesAvailable
-    ? "Super Swipes are a paid feature"
-    : canSuperLike
-      ? "Super Swipe"
-      : "No Super Swipes left today"
-
   return (
     <Box
-      className={`shortlistRow${isBusy ? " isBusy" : ""}${card.superLikedYou ? " superLikedYou" : ""}`}
+      className={`shortlistRow${isBusy ? " isBusy" : ""}`}
     >
       <Box
         component="button"
@@ -75,12 +60,6 @@ const ShortlistRow = React.memo(function ShortlistRow({
             <span className="rowName">{card.name}</span>
             {card.verified && (
               <VerifiedRounded className="rowVerified" titleAccess="Verified profile" />
-            )}
-            {card.superLikedYou && (
-              <span className="rowSuperBadge">
-                <BoltRounded />
-                SUPER
-              </span>
             )}
           </Box>
 
@@ -122,27 +101,6 @@ const ShortlistRow = React.memo(function ShortlistRow({
               aria-label={`Pass on ${card.name}`}
             >
               <CloseRounded />
-            </Box>
-          </span>
-        </Tooltip>
-
-        <Tooltip title={superTitle} arrow>
-          <span>
-            <Box
-              component="button"
-              type="button"
-              className={`rowAction super${superLikesAvailable ? "" : " isLocked"}`}
-              // Stays clickable when locked so it can open the paywall; a dead
-              // button converts worse than a visible locked one.
-              onClick={() =>
-                superLikesAvailable ? onAction("super", card) : onUpgrade()
-              }
-              disabled={isBusy || (superLikesAvailable && (!canSwipe || !canSuperLike))}
-              aria-label={
-                superLikesAvailable ? `Super Swipe ${card.name}` : "Unlock Super Swipes"
-              }
-            >
-              {superLikesAvailable ? <BoltRounded /> : <LockRounded />}
             </Box>
           </span>
         </Tooltip>

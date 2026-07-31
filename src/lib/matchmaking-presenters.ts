@@ -31,9 +31,6 @@ export type MatchProfileCard = {
   /** Cleaned location string safe to drop into a map query, or null when not shared. */
   mapQuery: string | null
   hasLocation: boolean
-  /** This candidate Super Swiped the viewer, so the card gets the accent ring and badge. */
-  superLikedYou: boolean
-  superLikedAt: string | null
 }
 
 const LOCATION_NOT_SHARED = "Location not shared"
@@ -240,8 +237,6 @@ export function mapSuggestionToCard(suggestion: MatchSuggestion): MatchProfileCa
     location,
     mapQuery: hasLocation ? location : null,
     hasLocation,
-    superLikedYou: Boolean(suggestion.superLikedYou),
-    superLikedAt: suggestion.superLikedAt ?? null,
     stage: humanize(String(stage)),
     capital: buildCapitalLabel(suggestion),
     fitScore: suggestion.matchScore,
