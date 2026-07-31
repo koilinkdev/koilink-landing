@@ -24,6 +24,8 @@ import MatchInsightsPanel from "./MatchInsightsPanel"
 import MatchProfileHeader from "./MatchProfileHeader"
 import SuperLikePaywallDialog from "./SuperLikePaywallDialog"
 import { getMyLimitsApi } from "@/lib/subscription-api"
+import { getShortlistRejection } from "@/lib/shortlist-api"
+import { useShortlist } from "../Shortlist/ShortlistProvider"
 import type {
   MatchedConversation,
   SuperLikeQuota,
@@ -59,6 +61,7 @@ const countActiveFilters = (preferences: MatchPreferences) => {
 
 const MatchProfileClient = () => {
   const router = useRouter()
+  const shortlist = useShortlist()
   const [profiles, setProfiles] = React.useState<MatchProfileCard[]>([])
   const [activeIndex, setActiveIndex] = React.useState(0)
   const [dragX, setDragX] = React.useState(0)
@@ -120,12 +123,16 @@ const MatchProfileClient = () => {
   const canSuperLike = canInteract && superLikesAvailable && hasSuperQuota && !superLimitState
   const remainingCount = Math.max(profiles.length - activeIndex, 0)
   const activeFilterCount = React.useMemo(() => countActiveFilters(savedPrefs), [savedPrefs])
+  // The persisted total, not this session's tally, so it always agrees with the
+  // header badge and the drawer. Connected/Passed stay session-scoped because
+  // there is no equivalent persisted surface for them.
+  const shortlistedCount = shortlist?.capacity.count ?? savedIds.length
   const headerStats = React.useMemo(() => {
     const stats = [
       // "In deck" rather than "Remaining": this is local deck position, not quota.
       { label: "In deck", value: remainingCount },
       { label: "Connected", value: connectedIds.length },
-      { label: "Shortlisted", value: savedIds.length },
+      { label: "Shortlisted", value: shortlistedCount },
       { label: "Passed", value: passedIds.length },
     ]
 
@@ -145,7 +152,7 @@ const MatchProfileClient = () => {
     connectedIds.length,
     passedIds.length,
     remainingCount,
-    savedIds.length,
+    shortlistedCount,
     superQuota,
     swipesRemaining,
   ])
@@ -284,6 +291,15 @@ const MatchProfileClient = () => {
         return
       }
 
+      // Same reasoning as the Super Swipe pre-check below: a full shortlist is
+      // known client-side, so reject before the card animates away.
+      if (decision === "save" && shortlist?.capacity.isFull) {
+        setFeedbackMessage(
+          `Your shortlist is full (${shortlist.capacity.limit}). Act on a few saved profiles to make room.`,
+        )
+        return
+      }
+
       // Checked before spending the animation so an out-of-quota tap opens the
       // paywall immediately rather than advancing the card and rolling back.
       if (decision === "super" && !canSuperLike) {
@@ -317,37 +333,60 @@ const MatchProfileClient = () => {
 
       animationTimerRef.current = window.setTimeout(async () => {
         try {
-          const swipeResponse =
-            decision === "save"
-              ? null
-              : await swipeProfileApi(
-                  processedProfile.userId,
-                  decision === "super" ? "super" : decision === "like" ? "right" : "left",
-                )
+          // Shortlisting is a park, not a decision, so it goes to its own
+          // endpoint and never touches swipe quota. The server removes the
+          // profile from the deck, which is why the card advances on success.
+          if (decision === "save") {
+            if (!shortlist) {
+              throw new Error("Shortlist is unavailable right now.")
+            }
+
+            const result = await shortlist.add(processedProfile.userId)
+            setSavedIds((ids) => appendUnique(ids, processedProfile.id))
+            setFeedbackMessage(
+              result.alreadyShortlisted
+                ? `${processedProfile.name} is already in your shortlist.`
+                : `${processedProfile.name} saved. Open the star in the header to decide later.`,
+            )
+            setActiveIndex((index) => index + 1)
+            setActiveDecision(null)
+            setDragX(0)
+            setIsAnimating(false)
+            return
+          }
+
+          const swipeResponse = await swipeProfileApi(
+            processedProfile.userId,
+            decision === "super" ? "super" : decision === "like" ? "right" : "left",
+          )
+
+          // Only reachable when a shortlisted profile was somehow still in the
+          // local deck (a stale page held across a shortlist made elsewhere).
+          if (swipeResponse.removedFromShortlist) {
+            shortlist?.registerExternalRemoval()
+          }
 
           // The response carries live quotas on every swipe; previously it was
           // discarded, which is why no counter could be shown.
-          if (swipeResponse) {
-            const { superLikesDailyLimit: superLimit, superLikesRemaining: superRemaining } =
-              swipeResponse.limits
+          const { superLikesDailyLimit: superLimit, superLikesRemaining: superRemaining } =
+            swipeResponse.limits
 
-            setSwipesRemaining(swipeResponse.limits.swipesRemaining)
-            setSuperQuota((previous) => ({
-              used:
-                typeof superRemaining === "number" && superLimit > 0
-                  ? superLimit - superRemaining
-                  : previous?.used ?? 0,
-              limit: superLimit,
-              remaining: superRemaining,
-              available: superLimit !== 0,
-            }))
-          }
+          setSwipesRemaining(swipeResponse.limits.swipesRemaining)
+          setSuperQuota((previous) => ({
+            used:
+              typeof superRemaining === "number" && superLimit > 0
+                ? superLimit - superRemaining
+                : previous?.used ?? 0,
+            limit: superLimit,
+            remaining: superRemaining,
+            available: superLimit !== 0,
+          }))
 
           if (decision === "like" || decision === "super") {
             setConnectedIds((ids) => appendUnique(ids, processedProfile.id))
             setSwipeLimitState(null)
 
-            if (swipeResponse?.match?.conversationId && swipeResponse.match.isNewMatch) {
+            if (swipeResponse.match?.conversationId && swipeResponse.match.isNewMatch) {
               const matchedName = swipeResponse.match.user?.displayName || processedProfile.name
               setMatchedConversation({
                 conversationId: swipeResponse.match.conversationId,
@@ -361,11 +400,8 @@ const MatchProfileClient = () => {
             } else {
               setFeedbackMessage(`Interest recorded for ${processedProfile.name}.`)
             }
-          } else if (decision === "pass") {
-            setPassedIds((ids) => appendUnique(ids, processedProfile.id))
           } else {
-            setSavedIds((ids) => appendUnique(ids, processedProfile.id))
-            setFeedbackMessage(`${processedProfile.name} added to your shortlist.`)
+            setPassedIds((ids) => appendUnique(ids, processedProfile.id))
           }
 
           setActiveIndex((index) => index + 1)
@@ -377,6 +413,15 @@ const MatchProfileClient = () => {
           setActiveDecision(null)
           setDragX(0)
           setIsAnimating(false)
+
+          // The card deliberately snaps back rather than advancing: nothing was
+          // parked, so hiding the profile would lose it until the deck reloads.
+          const shortlistRejection = getShortlistRejection(error)
+          if (shortlistRejection) {
+            setFeedbackMessage(shortlistRejection.message)
+            void shortlist?.refresh()
+            return
+          }
 
           if (limitState) {
             // Routed by quota type so a spent Super Swipe allowance leaves
@@ -412,6 +457,7 @@ const MatchProfileClient = () => {
       currentProfile,
       isAnimating,
       isLoading,
+      shortlist,
       superLikesAvailable,
       superLimitState,
       swipeLimitState,
@@ -717,7 +763,7 @@ const MatchProfileClient = () => {
             currentProfile={currentProfile}
             visibleDecision={visibleDecision}
             connectedCount={connectedIds.length}
-            savedCount={savedIds.length}
+            savedCount={shortlistedCount}
             passedCount={passedIds.length}
             documents={getProfileDocuments(currentProfile?.userId)}
             openingDocumentId={openingDocumentId}

@@ -7,6 +7,10 @@ import { usePathname } from "next/navigation";
 import CustomSearchAutocomplete from "@/components/ui/Dashboard/CustomSearchAutocomplete";
 import NotificationDrawer from "@/components/core/Dashboard/NotificationDrawer";
 import { useNotificationCenter } from "@/components/core/Dashboard/Notification/NotificationCenterProvider";
+import ShortlistDrawer from "@/components/core/Dashboard/Shortlist/ShortlistDrawer";
+import { useShortlist } from "@/components/core/Dashboard/Shortlist/ShortlistProvider";
+import { StarRounded } from "@mui/icons-material";
+import { secondary } from "@/theme/palette";
 
 interface DashboardHeaderProps {
   toggleDrawer: () => void;
@@ -14,10 +18,15 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ toggleDrawer }: DashboardHeaderProps) => {
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [shortlistOpen, setShortlistOpen] = useState(false);
   const notificationCenter = useNotificationCenter();
+  const shortlist = useShortlist();
   const unreadCount = notificationCenter?.unreadCount || 0;
+  const shortlistCount = shortlist?.capacity.count || 0;
   const toggleNotificationDrawer = () => setNotificationOpen((prev) => !prev);
   const closeNotificationDrawer = () => setNotificationOpen(false);
+  const toggleShortlistDrawer = () => setShortlistOpen((prev) => !prev);
+  const closeShortlistDrawer = () => setShortlistOpen(false);
   // atocomplete options
   const options = ["Option A", "Option B", "Option C"];
   const pathname = usePathname();
@@ -149,6 +158,37 @@ const DashboardHeader = ({ toggleDrawer }: DashboardHeaderProps) => {
                   alt="timestamp icon"
                 />
               </IconButton>
+              {/* Sits immediately left of the bell. Uses the same StarRounded
+                  icon and secondary colour as the deck's Shortlist action, so
+                  the two read as the same feature. */}
+              <IconButton
+                className="icon_btn"
+                aria-label={
+                  shortlistCount > 0
+                    ? `Shortlist, ${shortlistCount} saved`
+                    : "Shortlist"
+                }
+                onClick={toggleShortlistDrawer}
+              >
+                <Badge
+                  badgeContent={shortlistCount}
+                  max={99}
+                  overlap="circular"
+                  sx={{
+                    "& .MuiBadge-badge": {
+                      fontSize: 9,
+                      height: 15,
+                      minWidth: 15,
+                      padding: "0 4px",
+                      backgroundColor: secondary.main,
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  <StarRounded sx={{ fontSize: 20, color: secondary.main }} />
+                </Badge>
+              </IconButton>
+
               <IconButton className="icon_btn" color="primary"
                 aria-label={
                   unreadCount > 0
@@ -183,6 +223,7 @@ const DashboardHeader = ({ toggleDrawer }: DashboardHeaderProps) => {
         </Stack>
       </Box>
       <NotificationDrawer open={notificationOpen} onClose={closeNotificationDrawer} />
+      <ShortlistDrawer open={shortlistOpen} onClose={closeShortlistDrawer} />
     </DashboardheaderStyled>
   );
 };

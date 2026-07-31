@@ -3,6 +3,7 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v13-appRouter";
 import AuthGuard from "@/components/core/Auth/AuthGuard";
 import { CallProvider } from "@/components/core/Dashboard/Call/CallProvider";
 import { NotificationCenterProvider } from "@/components/core/Dashboard/Notification/NotificationCenterProvider";
+import { ShortlistProvider } from "@/components/core/Dashboard/Shortlist/ShortlistProvider";
 
 export default function DashboardLayout({
   children,
@@ -16,7 +17,9 @@ export default function DashboardLayout({
           <ThemeRegistry>
             <AuthGuard>
               <CallProvider>
-                <NotificationCenterProvider>{children}</NotificationCenterProvider>
+                <NotificationCenterProvider>
+                  <ShortlistProvider>{children}</ShortlistProvider>
+                </NotificationCenterProvider>
               </CallProvider>
             </AuthGuard>
           </ThemeRegistry>

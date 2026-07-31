@@ -157,6 +157,11 @@ export type SwipeResponse = {
     superLikedAt: string | null
   }
   match: (MatchSummary & { isNewMatch: boolean }) | null
+  /**
+   * True when this swipe also cleared a parked shortlist entry, so the caller
+   * can correct the shortlist badge without refetching the summary.
+   */
+  removedFromShortlist: boolean
   limits: {
     swipesRemaining: number | "unlimited"
     dailyLimit: number
